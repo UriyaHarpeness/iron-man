@@ -9,7 +9,11 @@ char level_names[6][10] = {"TRACE    ",
                            "CRITICAL "};
 
 int start_logging() {
+#if LOG_TO_STDOUT
+    logger_fd = 1;
+#else
     logger_fd = open(LOG_PATH, O_TRUNC | O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+#endif // LOG_TO_STDOUT
     return logger_fd;
 }
 
@@ -36,6 +40,8 @@ int write_log(enum log_levels level, char const *fmt, ...) {
 }
 
 int stop_logging() {
+#if !LOG_TO_STDOUT
     logger_fd = close(logger_fd);
+#endif // !LOG_TO_STDOUT
     return logger_fd;
 }
