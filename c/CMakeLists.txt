@@ -12,4 +12,6 @@ add_executable(iron_man main.c
         communication/connection.h
         logging/logging.c
         logging/logging.h
-        result.h)
+        result.h
+        tiny-aes/aes.c
+        tiny-aes/aes.h)

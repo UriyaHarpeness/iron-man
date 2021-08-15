@@ -20,6 +20,7 @@ enum log_levels {
 };
 
 #define ENABLED_LEVEL DEBUG
+#define LOG_TO_STDOUT 1
 
 int start_logging();
 
