@@ -2,6 +2,8 @@
 This is a Python equivalent for the https://github.com/kokke/tiny-AES-c AES_CTR.
 """
 
+from typing import List, Union
+
 Nb = 4
 Nk = 8
 Nr = 14
@@ -31,7 +33,6 @@ sbox = [
 Rcon = [0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36]
 
 UINT8_T = 256
-from typing import List
 
 
 class AES_ctx:
@@ -138,8 +139,8 @@ def Cipher(state: List[int], RoundKey: List[int]):
     AddRoundKey(Nr, state, RoundKey)
 
 
-def AES_CTR_xcrypt_buffer(ctx: AES_ctx, text: str, length: int) -> str:
-    text = [ord(c) for c in text]
+def AES_CTR_xcrypt_buffer(ctx: AES_ctx, text: Union[str, bytes], length: int) -> str:
+    text = [ord(c) for c in text] if isinstance(text, str) else list(text)
 
     buffer = [0] * AES_BLOCKLEN
     bi = AES_BLOCKLEN
@@ -160,7 +161,6 @@ def AES_CTR_xcrypt_buffer(ctx: AES_ctx, text: str, length: int) -> str:
             bi = 0
 
         text[i] = text[i] ^ buffer[bi]
-        i += 1
         bi += 1
 
     return ''.join(chr(c) for c in text)
