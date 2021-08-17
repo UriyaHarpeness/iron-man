@@ -29,6 +29,7 @@ int write_log(enum log_levels level, char const *fmt, ...) {
 
     time(&now);
     parsed = localtime(&now);
+    // todo: use macro to add the filename, function, and line number to logs.
     dprintf(logger_fd, "[%d/%02d/%02d %02d:%02d:%02d] %s | ", parsed->tm_year + 1900, parsed->tm_mon, parsed->tm_mday,
             parsed->tm_hour, parsed->tm_min, parsed->tm_sec, level_names[level]);
     va_start(args, fmt);
