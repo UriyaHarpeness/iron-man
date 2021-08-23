@@ -61,7 +61,7 @@ class IronMan:
 
     def check_result(self):
         result = self.connection.recv(8)
-        code, errno_value = struct.unpack('ii',
+        code, errno_value = struct.unpack('II',
                                           bytes([ord(c) for c in AES_CTR_xcrypt_buffer(self.ctx, result, len(result))]))
         if code != 0:
             raise ValueError(
@@ -72,9 +72,16 @@ class IronMan:
         self.check_result()
         return self.receive()
 
+    def put_file(self, path: str, content: str):
+        self.send(f'QI{len(path) + 1}s{len(content)}s', 0xe02e89ab86f0651f, len(path) + 1,
+                  bytes([ord(c) for c in path] + [0]), bytes([ord(c) for c in content]))
+        self.check_result()
+        self.receive()
+
 
 iron_man = IronMan()
-iron_man.get_file('/c/projects/iron-man/c/main.c')
+data = iron_man.get_file('/c/projects/iron-man/c/main.c')
+iron_man.put_file('/c/projects/iron-man/c/main.u', data)
 iron_man.get_file('/c/projects/iron-man/python/main.py')
 try:
     iron_man.get_file('/c/projects/iron-man/python/main.pyyy')

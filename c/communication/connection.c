@@ -5,32 +5,6 @@ int connection_fd = -1;
 
 struct AES_ctx ctx;
 
-uint64_t char_to_uint64(const char buf[8]) {
-    return *((uint64_t *) buf);
-}
-
-void uint64_to_char(uint64_t value, char buf[8]) {
-    *((uint64_t *) buf) = value;
-}
-
-void int_to_char(int value, char buf[4]) {
-    *((int *) buf) = value;
-}
-
-uint64_t read_uint64_t(result *res, buffer *buf) {
-    uint64_t value = 0;
-    if ((buf->size - buf->position) < 8) {
-        HANDLE_ERROR((*res), BUFFER_READING_OVERFLOW, "Buffer reading overflow", NULL)
-    }
-
-    value = char_to_uint64(buf->data + buf->position);
-    buf->position += 8;
-
-    error_cleanup:
-
-    return value;
-}
-
 void read_into_buffer(result *res, buffer *buf) {
     char buf_size[8];
     if (read(connection_fd, buf_size, 8) != 8) {
@@ -91,8 +65,8 @@ result send_result(result res) {
     char values[8];
     INITIALIZE_RESULT(res_);
 
-    int_to_char(res.code, values);
-    int_to_char(res.errno_value, values + 4);
+    unsigned_int_to_char(res.code, values);
+    unsigned_int_to_char(res.errno_value, values + 4);
     AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) values, 8);
     if (write(connection_fd, values, 8) != 8) {
         HANDLE_ERROR(res_, FAILED_WRITE, "Failed writing to socket: %d", errno)
