@@ -9,6 +9,8 @@ add_executable(iron_man main.c
         commands/commands.h
         commands/get_file/get_file.c
         commands/get_file/get_file.h
+        commands/put_file/put_file.c
+        commands/put_file/put_file.h
         communication/buffer.c
         communication/buffer.h
         communication/connection.c
