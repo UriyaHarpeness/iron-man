@@ -1,7 +1,29 @@
+import errno
+import os
 import socket
 import struct
 
+import enum
+
 from tiny_aes import AES_init_ctx_iv, AES_CTR_xcrypt_buffer
+
+
+class ResultCode(enum.Enum):
+    SUCCESS = 0,
+
+    FAILED_SOCKET = 1,
+    FAILED_BIND = 2,
+    FAILED_LISTEN = 3,
+    FAILED_ACCEPT = 4,
+    FAILED_READ = 5,
+    FAILED_WRITE = 6,
+    FAILED_MALLOC = 7,
+    FAILED_STAT = 8,
+    FAILED_OPEN = 9,
+
+    BUFFER_READING_OVERFLOW = 101,
+    HANDSHAKE_FAILED = 102,
+    UNKNOWN_COMMAND = 103,
 
 
 class IronMan:
@@ -21,6 +43,7 @@ class IronMan:
         self.send('Q', 0x424021fca0537ac5)
 
     def __del__(self):
+        self.send('Q', 0)
         self.connection.close()
 
     def send(self, fmt: str, *args):
@@ -36,12 +59,25 @@ class IronMan:
         message = AES_CTR_xcrypt_buffer(self.ctx, message, len(message))
         return message
 
+    def check_result(self):
+        result = self.connection.recv(8)
+        code, errno_value = struct.unpack('ii',
+                                          bytes([ord(c) for c in AES_CTR_xcrypt_buffer(self.ctx, result, len(result))]))
+        if code != 0:
+            raise ValueError(
+                f'Got failed result: {ResultCode((code,)).name} [{errno.errorcode[errno_value]} - {os.strerror(errno_value)}]')
+
+    def get_file(self, path: str):
+        self.send(f'Q{len(path) + 1}s', 0xdc3038f0f5c62a24, bytes([ord(c) for c in path] + [0]))
+        self.check_result()
+        return self.receive()
+
 
 iron_man = IronMan()
-
-MSGS = ['good', 'too', 'exit']
-for msg in MSGS:
-    print('Sending', msg)
-    iron_man.send("%ds" % (len(msg),), bytes([ord(c) for c in msg]))
-    got = iron_man.receive()
-    print('Received', got)
+iron_man.get_file('/c/projects/iron-man/c/main.c')
+iron_man.get_file('/c/projects/iron-man/python/main.py')
+try:
+    iron_man.get_file('/c/projects/iron-man/python/main.pyyy')
+except Exception as e:
+    print(e)
+print(iron_man.get_file('/c/projects/iron-man/python/main.py'))

@@ -20,7 +20,7 @@ void reuse_buffer(result *res, buffer *buf, size_t size) {
 }
 
 buffer create_buffer(result *res, size_t size) {
-    buffer buf = {NULL, size, 0};
+    INITIALIZE_BUFFER(buf);
     reuse_buffer(res, &buf, size);
     HANDLE_ERROR_RESULT((*res));
 

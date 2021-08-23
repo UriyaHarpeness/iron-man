@@ -13,6 +13,10 @@ void uint64_to_char(uint64_t value, char buf[8]) {
     *((uint64_t *) buf) = value;
 }
 
+void int_to_char(int value, char buf[4]) {
+    *((int *) buf) = value;
+}
+
 uint64_t read_uint64_t(result *res, buffer *buf) {
     uint64_t value = 0;
     if ((buf->size - buf->position) < 8) {
@@ -54,15 +58,60 @@ void read_into_buffer(result *res, buffer *buf) {
 }
 
 buffer read_buffer(result *res) {
-    buffer buf = {NULL, 0, 0};
+    INITIALIZE_BUFFER(buf);
     read_into_buffer(res, &buf);
     return buf;
+}
+
+result send_buffer(buffer buf) {
+    char size[8];
+    INITIALIZE_RESULT(res);
+
+    uint64_to_char(buf.size, size);
+    AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) size, 8);
+    if (write(connection_fd, size, 8) != 8) {
+        HANDLE_ERROR(res, FAILED_WRITE, "Failed writing to socket: %d", errno)
+    }
+
+    AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) buf.data, buf.size);
+    if (write(connection_fd, buf.data, buf.size) != buf.size) {
+        HANDLE_ERROR(res, FAILED_WRITE, "Failed writing to socket: %d", errno)
+    }
+
+    goto cleanup;
+
+    error_cleanup:
+
+    cleanup:
+
+    return res;
+}
+
+result send_result(result res) {
+    char values[8];
+    INITIALIZE_RESULT(res_);
+
+    int_to_char(res.code, values);
+    int_to_char(res.errno_value, values + 4);
+    AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) values, 8);
+    if (write(connection_fd, values, 8) != 8) {
+        HANDLE_ERROR(res_, FAILED_WRITE, "Failed writing to socket: %d", errno)
+    }
+
+    goto cleanup;
+
+    error_cleanup:
+
+    cleanup:
+
+    return res_;
 }
 
 result connect_() {
     unsigned int client_address_len;
     struct sockaddr_in server_address, client_address;
-    INITIAL_RESULT(res);
+    INITIALIZE_RESULT(res);
+    INITIALIZE_BUFFER(buf);
 
     socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (-1 == socket_fd) {
@@ -95,7 +144,7 @@ result connect_() {
 
     AES_init_ctx_iv(&ctx, KEY, IV);
 
-    buffer buf = read_buffer(&res);
+    buf = read_buffer(&res);
     HANDLE_ERROR_RESULT(res)
 
     uint64_t value = read_uint64_t(&res, &buf);
@@ -113,42 +162,48 @@ result connect_() {
 
     cleanup:
 
+    destroy_buffer(&buf);
+
     return res;
 }
 
 result communicate() {
-    buffer buf = {NULL, 0, 0};
-    uint16_t conn = 1;
-    INITIAL_RESULT(res);
+    INITIALIZE_BUFFER(buf);
+    INITIALIZE_BUFFER(buf_out);
+    INITIALIZE_RESULT(res);
+    INITIALIZE_RESULT(tmp_res);
 
-    while (conn) {
-        read_into_buffer(&res, &buf);
+    while (1) {
+        RESET_RESULT(res)
+
+        buf = read_buffer(&res);
         HANDLE_ERROR_RESULT(res)
 
-        write_log(INFO, "Got \"%s\" from client", buf.data);
-
-        if (strncmp("exit", buf.data, 4) == 0) {
-            conn = 0;
+        uint64_t command_id = read_uint64_t(&res, &buf);
+        HANDLE_ERROR_RESULT(res);
+        if (command_id == 0) {
             write_log(INFO, "Gracefully disconnecting");
+            break;
         }
 
-        // todo: use buffer and send it.
-        char size[8];
-        uint64_to_char(buf.size, size);
-        AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) size, 8);
-        if (write(connection_fd, size, 8) != 8) {
-            HANDLE_ERROR(res, FAILED_WRITE, "Failed writing to socket: %d", errno)
+        buf_out = run_command(&res, command_id, &buf);
+        tmp_res = send_result(res);
+        HANDLE_ERROR_RESULT(tmp_res)
+        if (RESULT_SUCCEEDED(res)) {
+            res = send_buffer(buf_out);
+            HANDLE_ERROR_RESULT(res)
         }
 
-        AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) buf.data, buf.size);
-        if (write(connection_fd, buf.data, buf.size) != buf.size) {
-            HANDLE_ERROR(res, FAILED_WRITE, "Failed writing to socket: %d", errno)
-        }
+        destroy_buffer(&buf_out);
+        destroy_buffer(&buf);
     }
 
     error_cleanup:
 
     cleanup:
+
+    destroy_buffer(&buf_out);
+    destroy_buffer(&buf);
 
     return res;
 }
