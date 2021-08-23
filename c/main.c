@@ -1,9 +1,8 @@
-#include "commands/commands.h"
 #include "communication/connection.h"
 #include "logging/logging.h"
 
 int main() {
-    INITIAL_RESULT(res);
+    INITIALIZE_RESULT(res);
 
     start_logging();
 
@@ -23,4 +22,6 @@ int main() {
     write_log(CRITICAL, "Stopped Iron Man");
 
     stop_logging();
+
+    // todo: add const qualifiers.
 }
