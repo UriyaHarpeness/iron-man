@@ -1,6 +1,7 @@
 #include "get_file.h"
 
 buffer get_file(result *res, buffer *buf) {
+    // todo: send length
     write_log(INFO, "Getting file: %s", buf->data + buf->position);
 
     int file_fd = -1;

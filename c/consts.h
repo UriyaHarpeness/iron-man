@@ -9,4 +9,5 @@ static const uint8_t IV[16] = {0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
 
 static const uint64_t HANDSHAKE = 0x424021fca0537ac5;
 
-static const int PORT = 8080;
+// Unofficial Minecraft (Java Edition) multiplayer server TCP port.
+static const int PORT = 25565;

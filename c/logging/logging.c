@@ -1,12 +1,12 @@
 #include "logging.h"
 
 int logger_fd = -1;
-char level_names[6][10] = {"TRACE    ",
-                           "DEBUG    ",
-                           "INFO     ",
-                           "WARNING  ",
-                           "ERROR    ",
-                           "CRITICAL "};
+char level_names[6][11] = {"TRACE     ",
+                           "DEBUG     ",
+                           "INFO      ",
+                           "WARNING   ",
+                           "ERROR ",
+                           "CRITICAL  "};
 
 int start_logging() {
 #if LOG_TO_STDOUT
@@ -30,8 +30,12 @@ int write_log(enum log_levels level, char const *fmt, ...) {
     time(&now);
     parsed = localtime(&now);
     // todo: use macro to add the filename, function, and line number to logs.
-    dprintf(logger_fd, "[%d/%02d/%02d %02d:%02d:%02d] %s | ", parsed->tm_year + 1900, parsed->tm_mon, parsed->tm_mday,
+    dprintf(logger_fd, "[%d/%02d/%02d %02d:%02d:%02d] %s", parsed->tm_year + 1900, parsed->tm_mon, parsed->tm_mday,
             parsed->tm_hour, parsed->tm_min, parsed->tm_sec, level_names[level]);
+    if (level == ERROR) {
+        dprintf(logger_fd, (errno != 0 ? "%3d " : "    "), errno);
+    }
+    dprintf(logger_fd, "| ");
     va_start(args, fmt);
     length = vdprintf(logger_fd, fmt, args);
     va_end(args);

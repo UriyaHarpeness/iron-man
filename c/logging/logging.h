@@ -1,5 +1,6 @@
 #pragma once
 
+#include <errno.h>
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>

@@ -1,11 +1,14 @@
 #include "put_file.h"
 
 buffer put_file(result *res, buffer *buf) {
+    INITIALIZE_BUFFER(buf_out);
+    int file_fd = -1;
+
     unsigned int path_length = read_unsigned_int(res, buf);
+    HANDLE_ERROR_RESULT((*res))
+
     write_log(INFO, "Putting file: %s", buf->data + buf->position);
 
-    int file_fd = -1;
-    INITIALIZE_BUFFER(buf_out);
 
     file_fd = open(buf->data + buf->position, O_TRUNC | O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
     if (file_fd == -1) {

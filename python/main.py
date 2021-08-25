@@ -1,9 +1,13 @@
 import errno
 import os
+import select
 import socket
 import struct
 
 import enum
+from typing import List
+
+import threading
 
 from tiny_aes import AES_init_ctx_iv, AES_CTR_xcrypt_buffer
 
@@ -20,6 +24,13 @@ class ResultCode(enum.Enum):
     FAILED_MALLOC = 7,
     FAILED_STAT = 8,
     FAILED_OPEN = 9,
+    FAILED_PIPE = 10,
+    FAILED_FORK = 11,
+    FAILED_DUP2 = 12,
+    FAILED_EXECVP = 13,
+    FAILED_SELECT = 14,
+    FAILED_KILL = 15,
+    FAILED_SIGNAL = 16,
 
     BUFFER_READING_OVERFLOW = 101,
     HANDSHAKE_FAILED = 102,
@@ -28,7 +39,7 @@ class ResultCode(enum.Enum):
 
 class IronMan:
     HOST = '127.0.0.1'
-    PORT = 8080
+    PORT = 25565
     KEY = [0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,
            0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
            0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7,
@@ -46,45 +57,96 @@ class IronMan:
         self.send('Q', 0)
         self.connection.close()
 
+    @staticmethod
+    def to_bytes(string: str, null_terminator: bool = False) -> bytes:
+        return bytes([ord(c) for c in string] + ([0] if null_terminator else []))
+
     def send(self, fmt: str, *args):
-        message = struct.pack(fmt, *args)
-        size = struct.pack('Q', len(message))
+        message = struct.pack('<' + fmt, *args)
+        size = struct.pack('<Q', len(message))
         self.connection.send(bytes([ord(c) for c in AES_CTR_xcrypt_buffer(self.ctx, size, len(size))]))
         self.connection.send(bytes([ord(c) for c in AES_CTR_xcrypt_buffer(self.ctx, message, len(message))]))
 
     def receive(self):
         size = self.connection.recv(8)
-        size = struct.unpack('Q', bytes([ord(c) for c in AES_CTR_xcrypt_buffer(self.ctx, size, len(size))]))[0]
+        size = struct.unpack('<Q', bytes([ord(c) for c in AES_CTR_xcrypt_buffer(self.ctx, size, len(size))]))[0]
         message = self.connection.recv(size)
         message = AES_CTR_xcrypt_buffer(self.ctx, message, len(message))
         return message
 
     def check_result(self):
         result = self.connection.recv(8)
-        code, errno_value = struct.unpack('II',
-                                          bytes([ord(c) for c in AES_CTR_xcrypt_buffer(self.ctx, result, len(result))]))
+        code, errno_value = struct.unpack('<II', self.to_bytes(AES_CTR_xcrypt_buffer(self.ctx, result, len(result))))
         if code != 0:
             raise ValueError(
                 f'Got failed result: {ResultCode((code,)).name} [{errno.errorcode[errno_value]} - {os.strerror(errno_value)}]')
 
     def get_file(self, path: str):
-        self.send(f'Q{len(path) + 1}s', 0xdc3038f0f5c62a24, bytes([ord(c) for c in path] + [0]))
+        self.send(f'Q{len(path) + 1}s', 0xdc3038f0f5c62a24, self.to_bytes(path, True))
         self.check_result()
         return self.receive()
 
     def put_file(self, path: str, content: str):
         self.send(f'QI{len(path) + 1}s{len(content)}s', 0xe02e89ab86f0651f, len(path) + 1,
-                  bytes([ord(c) for c in path] + [0]), bytes([ord(c) for c in content]))
+                  self.to_bytes(path, True), self.to_bytes(content, True))
+        self.check_result()
+        self.receive()
+
+    def run_shell(self, command: str, args: List[str]):
+        func_args = []
+        for arg in args:
+            func_args += [len(arg) + 1, self.to_bytes(arg, True)]
+        self.send(f'QI{len(command) + 1}sI' + ''.join(f'I{len(arg) + 1}s' for arg in args),
+                  0x2385d0791aec41e3, len(command) + 1, self.to_bytes(command, True), len(args), *func_args)
+
+        stop_event = threading.Event()
+
+        def receive():
+            while not stop_event.is_set():
+                while not select.select([self.connection], [], [], 0.05)[0]:
+                    if stop_event.is_set():
+                        return
+
+                output = self.receive()
+                print('=' * 50)
+                print(output)
+                print('-' * 50)
+
+        receiver = threading.Thread(target=receive)
+        receiver.start()
+
+        while True:
+            msg = input('>>> ')
+            if msg == 'KILL!':
+                stop_event.set()
+                receiver.join()
+                self.send('I', 0)
+                break
+
+            self.send(f'I{len(msg) + 1}s', len(msg) + 1, self.to_bytes(msg, True))
+
         self.check_result()
         self.receive()
 
 
-iron_man = IronMan()
-data = iron_man.get_file('/c/projects/iron-man/c/main.c')
-iron_man.put_file('/c/projects/iron-man/c/main.u', data)
-iron_man.get_file('/c/projects/iron-man/python/main.py')
-try:
-    iron_man.get_file('/c/projects/iron-man/python/main.pyyy')
-except Exception as e:
-    print(e)
-print(iron_man.get_file('/c/projects/iron-man/python/main.py'))
+def main():
+    iron_man = IronMan()
+
+    # todo: handle commands that fail or exit prematurely
+    # print(iron_man.run_shell('wot', []))
+    # print(iron_man.run_shell('sleep', ["1"]))
+
+    iron_man.run_shell('sh', [])
+    data = iron_man.get_file('/c/projects/iron-man/c/main.c')
+    iron_man.put_file('/c/projects/iron-man/c/main.u', data)
+    iron_man.get_file('/c/projects/iron-man/python/main.py')
+    try:
+        iron_man.get_file('/root')
+        iron_man.get_file('/c/projects/iron-man/python/main.pyyy')
+    except Exception as e:
+        print(e)
+    print(iron_man.get_file('/c/projects/iron-man/python/main.py'))
+
+
+if __name__ == '__main__':
+    main()

