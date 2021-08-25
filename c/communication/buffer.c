@@ -5,7 +5,7 @@ void reuse_buffer(result *res, buffer *buf, size_t size) {
     buf->size = size;
     buf->data = malloc(buf->size);
     if (buf->data == NULL) {
-        HANDLE_ERROR((*res), FAILED_MALLOC, "Failed allocating buffer: %d", errno)
+        HANDLE_ERROR((*res), FAILED_MALLOC, "Failed allocating buffer", NULL)
     }
 
     goto cleanup;
@@ -80,6 +80,20 @@ unsigned int read_unsigned_int(result *res, buffer *buf) {
 
     value = char_to_unsigned_int(buf->data + buf->position);
     buf->position += 4;
+
+    error_cleanup:
+
+    return value;
+}
+
+const char *read_string(result *res, buffer *buf, size_t length) {
+    char *value = NULL;
+    if ((buf->size - buf->position) < length) {
+        HANDLE_ERROR((*res), BUFFER_READING_OVERFLOW, "Buffer reading overflow", NULL)
+    }
+
+    value = buf->data + buf->position;
+    buf->position += length;
 
     error_cleanup:
 

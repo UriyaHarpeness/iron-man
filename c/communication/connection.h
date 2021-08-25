@@ -12,9 +12,13 @@
 #include <unistd.h>
 #include <errno.h>
 
+extern int connection_fd;
+
 void read_into_buffer(result *res, buffer *buf);
 
 buffer read_buffer(result *res);
+
+result send_string(char *string, uint64_t size);
 
 result send_buffer(buffer buf);
 

@@ -1,6 +1,7 @@
 #include "connection.h"
 
 int socket_fd = -1;
+
 int connection_fd = -1;
 
 struct AES_ctx ctx;
@@ -8,7 +9,7 @@ struct AES_ctx ctx;
 void read_into_buffer(result *res, buffer *buf) {
     char buf_size[8];
     if (read(connection_fd, buf_size, 8) != 8) {
-        HANDLE_ERROR((*res), FAILED_READ, "Failed reading from socket: %d", errno)
+        HANDLE_ERROR((*res), FAILED_READ, "Failed reading from socket", NULL)
     }
     AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) buf_size, sizeof(buf_size));
 
@@ -16,7 +17,7 @@ void read_into_buffer(result *res, buffer *buf) {
     HANDLE_ERROR_RESULT((*res))
 
     if (read(connection_fd, buf->data, buf->size) != buf->size) {
-        HANDLE_ERROR((*res), FAILED_READ, "Failed reading from socket: %d", errno)
+        HANDLE_ERROR((*res), FAILED_READ, "Failed reading from socket", NULL)
     }
     AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) buf->data, buf->size);
 
@@ -37,19 +38,19 @@ buffer read_buffer(result *res) {
     return buf;
 }
 
-result send_buffer(buffer buf) {
-    char size[8];
+result send_string(char *string, uint64_t size) {
     INITIALIZE_RESULT(res);
+    char size_[8];
 
-    uint64_to_char(buf.size, size);
-    AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) size, 8);
-    if (write(connection_fd, size, 8) != 8) {
-        HANDLE_ERROR(res, FAILED_WRITE, "Failed writing to socket: %d", errno)
+    uint64_to_char(size, size_);
+    AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) size_, 8);
+    if (write(connection_fd, size_, 8) != 8) {
+        HANDLE_ERROR(res, FAILED_WRITE, "Failed writing to socket", NULL)
     }
 
-    AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) buf.data, buf.size);
-    if (write(connection_fd, buf.data, buf.size) != buf.size) {
-        HANDLE_ERROR(res, FAILED_WRITE, "Failed writing to socket: %d", errno)
+    AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) string, size);
+    if (write(connection_fd, string, size) != size) {
+        HANDLE_ERROR(res, FAILED_WRITE, "Failed writing to socket", NULL)
     }
 
     goto cleanup;
@@ -61,15 +62,19 @@ result send_buffer(buffer buf) {
     return res;
 }
 
+result send_buffer(buffer buf) {
+    return send_string(buf.data, buf.size);
+}
+
 result send_result(result res) {
-    char values[8];
     INITIALIZE_RESULT(res_);
+    char values[8];
 
     unsigned_int_to_char(res.code, values);
     unsigned_int_to_char(res.errno_value, values + 4);
     AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) values, 8);
     if (write(connection_fd, values, 8) != 8) {
-        HANDLE_ERROR(res_, FAILED_WRITE, "Failed writing to socket: %d", errno)
+        HANDLE_ERROR(res_, FAILED_WRITE, "Failed writing to socket", NULL)
     }
 
     goto cleanup;
@@ -89,7 +94,7 @@ result connect_() {
 
     socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (-1 == socket_fd) {
-        HANDLE_ERROR(res, FAILED_SOCKET, "Failed creating socket: %d", errno)
+        HANDLE_ERROR(res, FAILED_SOCKET, "Failed creating socket", NULL)
     }
     write_log(DEBUG, "Created socket");
     bzero(&server_address, sizeof(server_address));
@@ -99,12 +104,12 @@ result connect_() {
     server_address.sin_port = htons(PORT);
 
     if (bind(socket_fd, (struct sockaddr *) &server_address, sizeof(server_address)) != 0) {
-        HANDLE_ERROR(res, FAILED_BIND, "Failed binding socket: %d", errno)
+        HANDLE_ERROR(res, FAILED_BIND, "Failed binding socket", NULL)
     }
     write_log(DEBUG, "Bound socket");
 
     if (listen(socket_fd, 0) == -1) {
-        HANDLE_ERROR(res, FAILED_LISTEN, "Failed listening on socket: %d", errno)
+        HANDLE_ERROR(res, FAILED_LISTEN, "Failed listening on socket", NULL)
     }
     write_log(DEBUG, "Listening on socket");
 
@@ -112,7 +117,7 @@ result connect_() {
 
     connection_fd = accept(socket_fd, (struct sockaddr *) &client_address, &client_address_len);
     if (-1 == connection_fd) {
-        HANDLE_ERROR(res, FAILED_ACCEPT, "Failed accepting connection: %d", errno)
+        HANDLE_ERROR(res, FAILED_ACCEPT, "Failed accepting connection", NULL)
     }
     write_log(DEBUG, "Accepted connection");
 

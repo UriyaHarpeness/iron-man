@@ -30,4 +30,6 @@ uint64_t read_uint64_t(result *res, buffer *buf);
 
 unsigned int read_unsigned_int(result *res, buffer *buf);
 
+const char *read_string(result *res, buffer *buf, size_t length);
+
 #define INITIALIZE_BUFFER(buf) buffer buf = {NULL, 0, 0}

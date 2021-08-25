@@ -22,4 +22,6 @@ int main() {
     write_log(CRITICAL, "Stopped Iron Man");
 
     stop_logging();
+
+    return EXIT_SUCCESS;
 }
