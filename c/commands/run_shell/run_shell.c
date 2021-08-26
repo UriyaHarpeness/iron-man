@@ -1,9 +1,5 @@
 #include "run_shell.h"
 
-void handle_sigchld(int sig) {
-    write_log(INFO, "Caught signal %d", sig);
-}
-
 #define PARENT 0
 #define CHILD 1
 #define READ 0
@@ -30,18 +26,19 @@ buffer run_shell(result *res, buffer *buf) {
     write_log(INFO, "Running file: %s, with %u args", command, args_num);
 
     // Preparing arguments for the command.
-    args = malloc(sizeof(char *) * (args_num + 1));
+    args = malloc(sizeof(char *) * (args_num + 2));
     if (args == NULL) {
         HANDLE_ERROR((*res), FAILED_MALLOC, "Failed allocating buffer", NULL)
     }
 
+    args[0] = command;
     for (size_t arg_index = 0; arg_index < args_num; arg_index++) {
         unsigned int arg_length = read_unsigned_int(res, buf);
         HANDLE_ERROR_RESULT((*res))
-        args[arg_index] = read_string(res, buf, arg_length);
+        args[arg_index + 1] = read_string(res, buf, arg_length);
         HANDLE_ERROR_RESULT((*res))
     }
-    args[args_num] = NULL;
+    args[args_num + 1] = NULL;
 
     if (pipe(fds[CHILD]) == -1) {
         HANDLE_ERROR((*res), FAILED_PIPE, "Failed piping child fds", NULL)
@@ -83,12 +80,7 @@ buffer run_shell(result *res, buffer *buf) {
 
     fd_set read_fds;
     struct timeval tv;
-    int retval;
-
-    // SIGCHLD
-    if (signal(17, handle_sigchld) == SIG_ERR) {
-        HANDLE_ERROR((*res), FAILED_SIGNAL, "Failed changing signal handler", NULL)
-    }
+    int select_result;
 
     char command_output[4096 + 1];
     size_t len;
@@ -97,29 +89,30 @@ buffer run_shell(result *res, buffer *buf) {
     write_log(INFO, "Created child process: %d", new_pid);
 
     // todo: maybe check with WIFEXITED(wstatus), but not necessarily.
-    while (waitpid(new_pid, &status, WNOHANG) != -1) {
+    while ((waitpid(new_pid, &status, WNOHANG) != -1) && (killed_child == 0)) {
         tv.tv_sec = 0;
         tv.tv_usec = 1000000;
-        while (killed_child == 0) {
+        while (1) {
             FD_ZERO(&read_fds);
             FD_SET(fds[PARENT][READ], &read_fds);
             FD_SET(connection_fd, &read_fds);
-            retval = select(((fds[PARENT][READ] > connection_fd) ? fds[PARENT][READ] : connection_fd) + 1, &read_fds,
-                            NULL, NULL, &tv);
+            select_result = select(((fds[PARENT][READ] > connection_fd) ? fds[PARENT][READ] : connection_fd) + 1,
+                                   &read_fds, NULL, NULL, &tv);
 
-            if (-1 == retval) {
+            if (-1 == select_result) {
                 HANDLE_ERROR((*res), FAILED_SELECT, "Failed select", NULL)
-            } else if (retval) {
+            } else if (select_result) {
                 if (FD_ISSET(fds[PARENT][READ], &read_fds)) {
                     len = read(fds[PARENT][READ], command_output, 4096);
-                    if (len == 0 && waitpid(new_pid, &status, WNOHANG) != -1) {
-                        write_log(INFO, "Child process has died");
-                        break;
-                    }
                     command_output[len] = 0;
                     write_log(INFO, "Read output of %zu bytes: %s", len, command_output);
                     *res = send_string(command_output, len);
                     HANDLE_ERROR_RESULT((*res))
+                    if (len == 0 && waitpid(new_pid, &status, WNOHANG) != -1) {
+                        write_log(INFO, "Child process has died %d", status);
+                        killed_child = 1;
+                        break;
+                    }
                 }
                 if (FD_ISSET(connection_fd, &read_fds)) {
                     read_into_buffer(res, &input_buf);
@@ -165,9 +158,6 @@ buffer run_shell(result *res, buffer *buf) {
     destroy_buffer(&input_buf);
 
     free(args);
-
-    // SIGCHLD
-    signal(17, SIG_DFL);
 
     return buf_out;
 }
