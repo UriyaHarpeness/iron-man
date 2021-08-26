@@ -5,6 +5,7 @@ import socket
 import struct
 
 import enum
+import sys
 from typing import List
 
 import threading
@@ -30,7 +31,6 @@ class ResultCode(enum.Enum):
     FAILED_EXECVP = 13,
     FAILED_SELECT = 14,
     FAILED_KILL = 15,
-    FAILED_SIGNAL = 16,
 
     BUFFER_READING_OVERFLOW = 101,
     HANDSHAKE_FAILED = 102,
@@ -92,38 +92,42 @@ class IronMan:
         self.check_result()
         self.receive()
 
-    def run_shell(self, command: str, args: List[str]):
+    def run_shell(self, command: str, args: List[str] = None):
+        args = args or []
         func_args = []
         for arg in args:
             func_args += [len(arg) + 1, self.to_bytes(arg, True)]
+
         self.send(f'QI{len(command) + 1}sI' + ''.join(f'I{len(arg) + 1}s' for arg in args),
                   0x2385d0791aec41e3, len(command) + 1, self.to_bytes(command, True), len(args), *func_args)
 
-        stop_event = threading.Event()
+        stop = False
+        while not stop:
+            while not select.select([self.connection, sys.stdin], [], [], 0.05)[0]:
+                pass
 
-        def receive():
-            while not stop_event.is_set():
-                while not select.select([self.connection], [], [], 0.05)[0]:
-                    if stop_event.is_set():
-                        return
+            for readable in select.select([self.connection, sys.stdin], [], [], 0.05)[0]:
+                if readable is self.connection:
+                    output = self.receive()
+                    if len(output) == 0:
+                        print('Child process died')
+                        stop = True
+                        continue
 
-                output = self.receive()
-                print('=' * 50)
-                print(output)
-                print('-' * 50)
+                    print('=' * 25, 'got', '=' * 25)
+                    print(output)
+                    print('-' * 55)
 
-        receiver = threading.Thread(target=receive)
-        receiver.start()
+                elif readable is sys.stdin:
+                    message = input()
+                    print('>>>', message)
+                    if message == 'KILL!':
+                        print('Killing child process')
+                        self.send('I', 0)
+                        stop = True
+                        continue
 
-        while True:
-            msg = input('>>> ')
-            if msg == 'KILL!':
-                stop_event.set()
-                receiver.join()
-                self.send('I', 0)
-                break
-
-            self.send(f'I{len(msg) + 1}s', len(msg) + 1, self.to_bytes(msg, True))
+                    self.send(f'I{len(message) + 1}s', len(message) + 1, self.to_bytes(message, True))
 
         self.check_result()
         self.receive()
@@ -132,11 +136,9 @@ class IronMan:
 def main():
     iron_man = IronMan()
 
-    # todo: handle commands that fail or exit prematurely
-    # print(iron_man.run_shell('wot', []))
-    # print(iron_man.run_shell('sleep', ["1"]))
-
-    iron_man.run_shell('sh', [])
+    iron_man.run_shell('wot')
+    iron_man.run_shell('sleep', ['1'])
+    iron_man.run_shell('sh')
     data = iron_man.get_file('/c/projects/iron-man/c/main.c')
     iron_man.put_file('/c/projects/iron-man/c/main.u', data)
     iron_man.get_file('/c/projects/iron-man/python/main.py')
