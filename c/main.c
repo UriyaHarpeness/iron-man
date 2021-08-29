@@ -6,20 +6,20 @@ int main() {
 
     start_logging();
 
-    write_log(CRITICAL, "Started Iron Man");
+    WRITE_LOG(CRITICAL, "Started Iron Man", NULL)
 
     res = connect_();
     HANDLE_ERROR_RESULT(res)
 
-    write_log(WARNING, "Connected");
+    WRITE_LOG(WARNING, "Connected", NULL)
     res = communicate();
-    write_log(WARNING, "Disconnected");
+    WRITE_LOG(WARNING, "Disconnected", NULL)
 
     error_cleanup:
 
     disconnect();
 
-    write_log(CRITICAL, "Stopped Iron Man");
+    WRITE_LOG(CRITICAL, "Stopped Iron Man", NULL)
 
     stop_logging();
 

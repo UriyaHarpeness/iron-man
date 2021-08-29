@@ -96,7 +96,7 @@ result connect_() {
     if (-1 == socket_fd) {
         HANDLE_ERROR(res, FAILED_SOCKET, "Failed creating socket", NULL)
     }
-    write_log(DEBUG, "Created socket");
+    WRITE_LOG(DEBUG, "Created socket", NULL)
     bzero(&server_address, sizeof(server_address));
 
     server_address.sin_family = AF_INET;
@@ -106,12 +106,12 @@ result connect_() {
     if (bind(socket_fd, (struct sockaddr *) &server_address, sizeof(server_address)) != 0) {
         HANDLE_ERROR(res, FAILED_BIND, "Failed binding socket", NULL)
     }
-    write_log(DEBUG, "Bound socket");
+    WRITE_LOG(DEBUG, "Bound socket", NULL)
 
     if (listen(socket_fd, 0) == -1) {
         HANDLE_ERROR(res, FAILED_LISTEN, "Failed listening on socket", NULL)
     }
-    write_log(DEBUG, "Listening on socket");
+    WRITE_LOG(DEBUG, "Listening on socket", NULL)
 
     client_address_len = sizeof(client_address);
 
@@ -119,7 +119,7 @@ result connect_() {
     if (-1 == connection_fd) {
         HANDLE_ERROR(res, FAILED_ACCEPT, "Failed accepting connection", NULL)
     }
-    write_log(DEBUG, "Accepted connection");
+    WRITE_LOG(DEBUG, "Accepted connection", NULL)
 
     AES_init_ctx_iv(&ctx, KEY, IV);
 
@@ -161,7 +161,7 @@ result communicate() {
         uint64_t command_id = read_uint64_t(&res, &buf);
         HANDLE_ERROR_RESULT(res);
         if (command_id == 0) {
-            write_log(INFO, "Gracefully disconnecting");
+            WRITE_LOG(INFO, "Gracefully disconnecting", NULL)
             break;
         }
 

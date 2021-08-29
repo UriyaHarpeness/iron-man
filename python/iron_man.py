@@ -33,8 +33,9 @@ class ResultCode(enum.Enum):
     FAILED_KILL = 15,
 
     BUFFER_READING_OVERFLOW = 101,
-    HANDSHAKE_FAILED = 102,
-    UNKNOWN_COMMAND = 103,
+    BUFFER_WRITING_OVERFLOW = 102,
+    HANDSHAKE_FAILED = 103,
+    UNKNOWN_COMMAND = 104,
 
 
 class IronMan:
@@ -67,11 +68,13 @@ class IronMan:
         self.connection.send(bytes([ord(c) for c in AES_CTR_xcrypt_buffer(self.ctx, size, len(size))]))
         self.connection.send(bytes([ord(c) for c in AES_CTR_xcrypt_buffer(self.ctx, message, len(message))]))
 
-    def receive(self):
+    def receive(self, fmt: str = None) -> str:
         size = self.connection.recv(8)
         size = struct.unpack('<Q', bytes([ord(c) for c in AES_CTR_xcrypt_buffer(self.ctx, size, len(size))]))[0]
         message = self.connection.recv(size)
         message = AES_CTR_xcrypt_buffer(self.ctx, message, len(message))
+        if fmt is not None:
+            message = struct.unpack('<' + fmt, self.to_bytes(message))
         return message
 
     def check_result(self):
@@ -130,7 +133,7 @@ class IronMan:
                     self.send(f'I{len(message) + 1}s', len(message) + 1, self.to_bytes(message, True))
 
         self.check_result()
-        self.receive()
+        return self.receive('B')[0]
 
 
 def main():

@@ -1,7 +1,7 @@
 #include "commands.h"
 
 buffer run_command(result *res, uint64_t command_id, buffer *buf) {
-    write_log(INFO, "Running command: %llx", command_id);
+    WRITE_LOG(INFO, "Running command: %llx", command_id)
 
     buffer (*chosen_command)(result *, buffer *) = NULL;
     INITIALIZE_BUFFER(buf_out);
@@ -25,7 +25,7 @@ buffer run_command(result *res, uint64_t command_id, buffer *buf) {
     buf_out = chosen_command(res, buf);
     HANDLE_ERROR_RESULT((*res))
 
-    write_log(INFO, "Finished running command: %llx", command_id);
+    WRITE_LOG(INFO, "Finished running command: %llx", command_id)
 
     goto cleanup;
 

@@ -50,6 +50,10 @@ void uint64_to_char(uint64_t value, char buf[8]) {
     *((uint64_t *) buf) = value;
 }
 
+void uint8_to_char(uint8_t value, char buf[1]) {
+    *((uint8_t *) buf) = value;
+}
+
 unsigned int char_to_unsigned_int(const char buf[4]) {
     return *((unsigned int *) buf);
 }
@@ -98,4 +102,17 @@ const char *read_string(result *res, buffer *buf, size_t length) {
     error_cleanup:
 
     return value;
+}
+
+void write_uint8_t(result *res, buffer *buf, uint8_t value) {
+    if ((buf->size - buf->position) < 1) {
+        HANDLE_ERROR((*res), BUFFER_WRITING_OVERFLOW, "Buffer writing overflow", NULL)
+    }
+
+    uint8_to_char(value, buf->data + buf->position);
+    buf->position += 1;
+
+    error_cleanup:
+
+    return;
 }

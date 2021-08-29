@@ -25,8 +25,9 @@ enum result_code {
     FAILED_KILL = 15,
 
     BUFFER_READING_OVERFLOW = 101,
-    HANDSHAKE_FAILED = 102,
-    UNKNOWN_COMMAND = 103,
+    BUFFER_WRITING_OVERFLOW = 102,
+    HANDSHAKE_FAILED = 103,
+    UNKNOWN_COMMAND = 104,
 };
 
 typedef struct result_s {
@@ -52,7 +53,7 @@ typedef struct result_s {
 
 #define HANDLE_ERROR(res, err, fmt, ...) { \
     SET_ERROR(res, err); \
-    write_log(ERROR, fmt, __VA_ARGS__); \
+    WRITE_LOG(ERROR, fmt, __VA_ARGS__); \
     goto error_cleanup; \
 }
 
