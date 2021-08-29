@@ -7,7 +7,7 @@ buffer put_file(result *res, buffer *buf) {
     unsigned int path_length = read_unsigned_int(res, buf);
     HANDLE_ERROR_RESULT((*res))
 
-    write_log(INFO, "Putting file: %s", buf->data + buf->position);
+    WRITE_LOG(INFO, "Putting file: %s", buf->data + buf->position)
 
 
     file_fd = open(buf->data + buf->position, O_TRUNC | O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
@@ -20,7 +20,7 @@ buffer put_file(result *res, buffer *buf) {
         HANDLE_ERROR((*res), FAILED_READ, "Failed writing file: %s", buf->data + buf->position)
     }
 
-    write_log(INFO, "Put file: %s", buf->data + buf->position);
+    WRITE_LOG(INFO, "Put file: %s", buf->data + buf->position)
 
     goto cleanup;
 

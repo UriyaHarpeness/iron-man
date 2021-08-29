@@ -2,7 +2,7 @@
 
 buffer get_file(result *res, buffer *buf) {
     // todo: send length
-    write_log(INFO, "Getting file: %s", buf->data + buf->position);
+    WRITE_LOG(INFO, "Getting file: %s", buf->data + buf->position)
 
     int file_fd = -1;
     struct stat st;
@@ -24,7 +24,7 @@ buffer get_file(result *res, buffer *buf) {
         HANDLE_ERROR((*res), FAILED_READ, "Failed reading file: %s", buf->data + buf->position)
     }
 
-    write_log(INFO, "Got file: %s", buf->data + buf->position);
+    WRITE_LOG(INFO, "Got file: %s", buf->data + buf->position)
 
     goto cleanup;
 

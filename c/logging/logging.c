@@ -17,9 +17,9 @@ int start_logging() {
     return logger_fd;
 }
 
-int write_log(enum log_levels level, char const *fmt, ...) {
+int write_log(enum log_levels level, const char *file, const char *func, unsigned int line, char const *fmt, ...) {
     va_list args;
-    int length;
+    int bytes_written;
     struct tm *parsed;
     time_t now;
 
@@ -29,19 +29,21 @@ int write_log(enum log_levels level, char const *fmt, ...) {
 
     time(&now);
     parsed = localtime(&now);
-    // todo: use macro to add the filename, function, and line number to logs.
     dprintf(logger_fd, "[%d/%02d/%02d %02d:%02d:%02d] %s", parsed->tm_year + 1900, parsed->tm_mon, parsed->tm_mday,
             parsed->tm_hour, parsed->tm_min, parsed->tm_sec, level_names[level]);
     if (level == ERROR) {
         dprintf(logger_fd, (errno != 0 ? "%3d " : "    "), errno);
     }
-    dprintf(logger_fd, "| ");
+    bytes_written = dprintf(logger_fd, "| %s:%s:%d", file, func, line);
+    for (; bytes_written < 80; bytes_written++) {
+        dprintf(logger_fd, " ");
+    }
     va_start(args, fmt);
-    length = vdprintf(logger_fd, fmt, args);
+    bytes_written = vdprintf(logger_fd, fmt, args);
     va_end(args);
     dprintf(logger_fd, "\n");
 
-    return length;
+    return bytes_written;
 }
 
 int stop_logging() {

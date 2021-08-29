@@ -77,7 +77,7 @@ class IronManShell(Cmd):
             args = [arg]
         else:
             args = [arg[:arg.find(' ')], arg[arg.find(' ') + 1:].split(' ')]
-        self.im.run_shell(*args)
+        print('Exit code:', self.im.run_shell(*args))
 
     def do_disconnect(self, _=None):
         """

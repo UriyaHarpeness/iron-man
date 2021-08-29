@@ -25,6 +25,10 @@ enum log_levels {
 
 int start_logging();
 
-int write_log(enum log_levels level, char const *fmt, ...);
+int write_log(enum log_levels level, const char *file, const char *func, unsigned int line, char const *fmt, ...);
 
 int stop_logging();
+
+#define WRITE_LOG(level, fmt, ...) { \
+    write_log(level, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__); \
+}
