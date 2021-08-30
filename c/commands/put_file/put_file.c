@@ -1,5 +1,6 @@
 #include "put_file.h"
 
+__attribute__((section(".put_file")))
 buffer put_file(result *res, buffer *buf) {
     INITIALIZE_BUFFER(buf_out);
     int file_fd = -1;

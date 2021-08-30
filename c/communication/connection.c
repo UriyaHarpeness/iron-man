@@ -152,6 +152,9 @@ result communicate() {
     INITIALIZE_RESULT(res);
     INITIALIZE_RESULT(tmp_res);
 
+    const char *key;
+    const char *iv;
+
     while (1) {
         RESET_RESULT(res)
 
@@ -165,7 +168,9 @@ result communicate() {
             break;
         }
 
-        buf_out = run_command(&res, command_id, &buf);
+        key = read_string(&res, &buf, KEY_LENGTH);
+        iv = read_string(&res, &buf, IV_LENGTH);
+        buf_out = run_command(&res, command_id, key, iv, &buf);
         tmp_res = send_result(res);
         HANDLE_ERROR_RESULT(tmp_res)
         if (RESULT_SUCCEEDED(res)) {

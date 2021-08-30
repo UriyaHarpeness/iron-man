@@ -6,4 +6,7 @@
 #include "run_shell/run_shell.h"
 #include "../result.h"
 
-buffer run_command(result *res, uint64_t command_id, buffer *buf);
+result xcrypt_command(const char *key, const char *iv, const unsigned char *start_address,
+                      const unsigned char *end_address);
+
+buffer run_command(result *res, uint64_t command_id, const char *key, const char *iv, buffer *buf);

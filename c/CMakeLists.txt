@@ -3,6 +3,7 @@ project(iron_man C)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -Werror")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${CMAKE_SOURCE_DIR}/custom_sections.lds")
 
 add_executable(iron_man main.c
         commands/commands.c
@@ -23,3 +24,7 @@ add_executable(iron_man main.c
         result.h
         tiny-aes/aes.c
         tiny-aes/aes.h)
+
+add_custom_command(TARGET iron_man
+        POST_BUILD
+        COMMAND PYTHONPATH=../../python python3 ../../python/building/post_build.py --executable $<TARGET_FILE:iron_man> --config ../../python/config.json)

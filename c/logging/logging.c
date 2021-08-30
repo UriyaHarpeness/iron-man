@@ -38,6 +38,7 @@ int write_log(enum log_levels level, const char *file, const char *func, unsigne
     for (; bytes_written < 80; bytes_written++) {
         dprintf(logger_fd, " ");
     }
+    dprintf(logger_fd, " | ");
     va_start(args, fmt);
     bytes_written = vdprintf(logger_fd, fmt, args);
     va_end(args);

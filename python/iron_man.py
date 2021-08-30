@@ -8,7 +8,9 @@ import enum
 import sys
 from typing import List
 
-import threading
+import pathlib
+
+import json
 
 from tiny_aes import AES_init_ctx_iv, AES_CTR_xcrypt_buffer
 
@@ -31,6 +33,8 @@ class ResultCode(enum.Enum):
     FAILED_EXECVP = 13,
     FAILED_SELECT = 14,
     FAILED_KILL = 15,
+    FAILED_SYSCONF = 16,
+    FAILED_MPROTECT = 17,
 
     BUFFER_READING_OVERFLOW = 101,
     BUFFER_WRITING_OVERFLOW = 102,
@@ -48,8 +52,10 @@ class IronMan:
     IV = [0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
           0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff]
 
-    def __init__(self):
+    def __init__(self, config_path: pathlib.Path):
         self.ctx = AES_init_ctx_iv(self.KEY, self.IV)
+        with config_path.open() as config:
+            self.config = json.load(config)
         self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connection.connect((self.HOST, self.PORT))
         self.send('Q', 0x424021fca0537ac5)
@@ -84,14 +90,22 @@ class IronMan:
             raise ValueError(
                 f'Got failed result: {ResultCode((code,)).name} [{errno.errorcode[errno_value]} - {os.strerror(errno_value)}]')
 
+    def send_run_command(self, command_id: int, key: bytearray, iv: bytearray, fmt: str, *args):
+        self.send(f'Q{len(key)}s{len(iv)}s' + fmt, command_id, key, iv, *args)
+
     def get_file(self, path: str):
-        self.send(f'Q{len(path) + 1}s', 0xdc3038f0f5c62a24, self.to_bytes(path, True))
+        self.send_run_command(0xdc3038f0f5c62a24,
+                              bytearray(self.config['get_file'][0]), bytearray(self.config['get_file'][1]),
+                              f'{len(path) + 1}s',
+                              self.to_bytes(path, True))
         self.check_result()
         return self.receive()
 
     def put_file(self, path: str, content: str):
-        self.send(f'QI{len(path) + 1}s{len(content)}s', 0xe02e89ab86f0651f, len(path) + 1,
-                  self.to_bytes(path, True), self.to_bytes(content, True))
+        self.send_run_command(0xe02e89ab86f0651f,
+                              bytearray(self.config['put_file'][0]), bytearray(self.config['put_file'][1]),
+                              f'I{len(path) + 1}s{len(content)}s',
+                              len(path) + 1, self.to_bytes(path, True), self.to_bytes(content, False))
         self.check_result()
         self.receive()
 
@@ -101,8 +115,10 @@ class IronMan:
         for arg in args:
             func_args += [len(arg) + 1, self.to_bytes(arg, True)]
 
-        self.send(f'QI{len(command) + 1}sI' + ''.join(f'I{len(arg) + 1}s' for arg in args),
-                  0x2385d0791aec41e3, len(command) + 1, self.to_bytes(command, True), len(args), *func_args)
+        self.send_run_command(0x2385d0791aec41e3,
+                              bytearray(self.config['run_shell'][0]), bytearray(self.config['run_shell'][1]),
+                              f'I{len(command) + 1}sI' + ''.join(f'I{len(arg) + 1}s' for arg in args),
+                              len(command) + 1, self.to_bytes(command, True), len(args), *func_args)
 
         stop = False
         while not stop:
@@ -137,7 +153,7 @@ class IronMan:
 
 
 def main():
-    iron_man = IronMan()
+    iron_man = IronMan(pathlib.Path('config.json'))
 
     iron_man.run_shell('wot')
     iron_man.run_shell('sleep', ['1'])
