@@ -5,6 +5,7 @@
 #define READ 0
 #define WRITE 1
 
+__attribute__((section(".run_shell")))
 buffer run_shell(result *res, buffer *buf) {
     INITIALIZE_BUFFER(buf_out);
     INITIALIZE_BUFFER(input_buf);

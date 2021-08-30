@@ -1,6 +1,8 @@
 import traceback
 from cmd import Cmd
 
+import pathlib
+
 from iron_man import IronMan
 
 
@@ -51,11 +53,11 @@ class IronManShell(Cmd):
     def get_names(self):
         return self.GENERAL_COMMANDS + (self.CONNECTED_COMMANDS if self.im else self.DISCONNECTED_COMMANDS)
 
-    def do_connect(self, _=None):
+    def do_connect(self, arg):
         """
-        Connect to an Iron Man server.
+        Connect to an Iron Man server with given config path.
         """
-        self.im = IronMan()
+        self.im = IronMan(pathlib.Path(arg))
 
     def do_get_file(self, arg: str):
         """

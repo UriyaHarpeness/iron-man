@@ -1,5 +1,6 @@
 #include "get_file.h"
 
+__attribute__((section(".get_file")))
 buffer get_file(result *res, buffer *buf) {
     // todo: send length
     WRITE_LOG(INFO, "Getting file: %s", buf->data + buf->position)
