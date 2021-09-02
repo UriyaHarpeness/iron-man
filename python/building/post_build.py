@@ -38,8 +38,12 @@ def main():
                                                                                 addresses[1] - addresses[0]))
         generated_encryption[command] = [key, iv]
 
+    with args.config.open() as f:
+        config = json.load(f)
+
+    config['commands'] = generated_encryption
     with args.config.open('w+') as f:
-        json.dump(generated_encryption, f, indent=2)
+        json.dump(config, f, indent=2)
 
     with open(args.executable, 'wb') as f:
         f.write(elf)

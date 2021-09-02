@@ -3,3 +3,5 @@ cmake-build-debug*/
 __pycache__/
 *.pyc
 
+c/consts.h
+python/config.json

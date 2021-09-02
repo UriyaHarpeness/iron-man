@@ -7,6 +7,4 @@
 #include <signal.h>
 #include <sys/wait.h>
 
-#define RUN_SHELL_COMMAND_ID 0x2385d0791aec41e3
-
 buffer run_shell(result *res, buffer *buf);
