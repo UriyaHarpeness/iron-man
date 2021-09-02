@@ -25,6 +25,14 @@ add_executable(iron_man main.c
         tiny-aes/aes.c
         tiny-aes/aes.h)
 
+add_custom_command(OUTPUT consts.h
+        DEPENDS consts.h.ini
+        COMMAND PYTHONPATH=../../python python3 ../../python/building/generate_consts.py
+        --template ${CMAKE_SOURCE_DIR}/consts.h.ini
+        --config ../../python/config.json)
+
 add_custom_command(TARGET iron_man
         POST_BUILD
-        COMMAND PYTHONPATH=../../python python3 ../../python/building/post_build.py --executable $<TARGET_FILE:iron_man> --config ../../python/config.json)
+        COMMAND PYTHONPATH=../../python python3 ../../python/building/post_build.py
+        --executable $<TARGET_FILE:iron_man>
+        --config ../../python/config.json)

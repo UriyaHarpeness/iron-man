@@ -45,20 +45,14 @@ class ResultCode(enum.Enum):
 class IronMan:
     HOST = '127.0.0.1'
     PORT = 25565
-    KEY = [0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,
-           0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
-           0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7,
-           0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4]
-    IV = [0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
-          0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff]
 
     def __init__(self, config_path: pathlib.Path):
-        self.ctx = AES_init_ctx_iv(self.KEY, self.IV)
         with config_path.open() as config:
             self.config = json.load(config)
+        self.ctx = AES_init_ctx_iv(self.config['generated_consts']['key'], self.config['generated_consts']['iv'])
         self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connection.connect((self.HOST, self.PORT))
-        self.send('Q', 0x424021fca0537ac5)
+        self.send('Q', self.config['generated_consts']['handshake'][0])
 
     def __del__(self):
         self.send('Q', 0)
@@ -90,20 +84,22 @@ class IronMan:
             raise ValueError(
                 f'Got failed result: {ResultCode((code,)).name} [{errno.errorcode[errno_value]} - {os.strerror(errno_value)}]')
 
-    def send_run_command(self, command_id: int, key: bytearray, iv: bytearray, fmt: str, *args):
+    def send_run_command(self, command_name: str, fmt: str, *args):
+        command_id = self.config['generated_consts'][command_name + '_command_id'][0]
+        key = bytearray(self.config['commands'][command_name][0])
+        iv = bytearray(self.config['commands'][command_name][1])
+
         self.send(f'Q{len(key)}s{len(iv)}s' + fmt, command_id, key, iv, *args)
 
     def get_file(self, path: str):
-        self.send_run_command(0xdc3038f0f5c62a24,
-                              bytearray(self.config['get_file'][0]), bytearray(self.config['get_file'][1]),
+        self.send_run_command('get_file',
                               f'{len(path) + 1}s',
                               self.to_bytes(path, True))
         self.check_result()
         return self.receive()
 
     def put_file(self, path: str, content: str):
-        self.send_run_command(0xe02e89ab86f0651f,
-                              bytearray(self.config['put_file'][0]), bytearray(self.config['put_file'][1]),
+        self.send_run_command('put_file',
                               f'I{len(path) + 1}s{len(content)}s',
                               len(path) + 1, self.to_bytes(path, True), self.to_bytes(content, False))
         self.check_result()
@@ -115,8 +111,7 @@ class IronMan:
         for arg in args:
             func_args += [len(arg) + 1, self.to_bytes(arg, True)]
 
-        self.send_run_command(0x2385d0791aec41e3,
-                              bytearray(self.config['run_shell'][0]), bytearray(self.config['run_shell'][1]),
+        self.send_run_command('run_shell',
                               f'I{len(command) + 1}sI' + ''.join(f'I{len(arg) + 1}s' for arg in args),
                               len(command) + 1, self.to_bytes(command, True), len(args), *func_args)
 
