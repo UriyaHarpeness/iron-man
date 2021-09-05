@@ -5,4 +5,5 @@ __pycache__/
 *.pyc
 
 c/consts.h
+c/functions/functions.h
 python/config.json

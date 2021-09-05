@@ -11,6 +11,10 @@ void load_all_functions() {
 
     dlerror();    /* Clear any existing error */
 
+    struct AES_ctx command_ctx;
+    AES_init_ctx_iv(&command_ctx, FUNCTION_NAMES_KEY, FUNCTION_NAMES_IV);
+    AES_CTR_xcrypt_buffer(&command_ctx, (uint8_t *) function_names, FUNCTION_NAMES_LENGTH);
+
     const char *function_name_pointer = function_names;
     for (size_t index = 0; index < NUMBER_OF_FUNCTIONS; index++) {
         *functions[index] = dlsym(handle, function_name_pointer);

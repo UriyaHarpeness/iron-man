@@ -92,7 +92,7 @@ result connect_() {
     INITIALIZE_RESULT(res);
     INITIALIZE_BUFFER(buf);
 
-    socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    socket_fd = socket_f(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (-1 == socket_fd) {
         HANDLE_ERROR(res, FAILED_SOCKET, "Failed creating socket", NULL)
     }

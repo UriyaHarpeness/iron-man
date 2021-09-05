@@ -38,6 +38,11 @@ add_custom_command(OUTPUT consts.h
         --template ${CMAKE_SOURCE_DIR}/consts.h.ini
         --config ../../python/config.json)
 
+add_custom_command(OUTPUT functions/functions.h
+        DEPENDS functions/functions.h.ini
+        COMMAND PYTHONPATH=../../python python3 ../../python/building/generate_functions_loading.py
+        --template ${CMAKE_SOURCE_DIR}/functions/functions.h.ini)
+
 add_custom_command(TARGET iron_man
         POST_BUILD
         COMMAND PYTHONPATH=../../python python3 ../../python/building/post_build.py
