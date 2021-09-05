@@ -1,5 +1,7 @@
 #include "logging.h"
 
+#ifdef DEBUG_BUILD
+
 int logger_fd = -1;
 char level_names[6][11] = {"TRACE     ",
                            "DEBUG     ",
@@ -53,3 +55,5 @@ int stop_logging() {
 #endif // !LOG_TO_STDOUT
     return logger_fd;
 }
+
+#endif // DEBUG_BUILD

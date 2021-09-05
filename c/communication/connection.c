@@ -97,13 +97,13 @@ result connect_() {
         HANDLE_ERROR(res, FAILED_SOCKET, "Failed creating socket", NULL)
     }
     WRITE_LOG(DEBUG, "Created socket", NULL)
-    bzero(&server_address, sizeof(server_address));
+    bzero_f(&server_address, sizeof(server_address));
 
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = htonl(INADDR_ANY);
     server_address.sin_port = htons(PORT);
 
-    if (bind(socket_fd, (struct sockaddr *) &server_address, sizeof(server_address)) != 0) {
+    if (bind_f(socket_fd, (struct sockaddr *) &server_address, sizeof(server_address)) != 0) {
         HANDLE_ERROR(res, FAILED_BIND, "Failed binding socket", NULL)
     }
     WRITE_LOG(DEBUG, "Bound socket", NULL)
@@ -115,7 +115,7 @@ result connect_() {
 
     client_address_len = sizeof(client_address);
 
-    connection_fd = accept(socket_fd, (struct sockaddr *) &client_address, &client_address_len);
+    connection_fd = accept_f(socket_fd, (struct sockaddr *) &client_address, &client_address_len);
     if (-1 == connection_fd) {
         HANDLE_ERROR(res, FAILED_ACCEPT, "Failed accepting connection", NULL)
     }
@@ -162,7 +162,7 @@ result communicate() {
         HANDLE_ERROR_RESULT(res)
 
         uint64_t command_id = read_uint64_t(&res, &buf);
-        HANDLE_ERROR_RESULT(res);
+        HANDLE_ERROR_RESULT(res)
         if (command_id == 0) {
             WRITE_LOG(INFO, "Gracefully disconnecting", NULL)
             break;

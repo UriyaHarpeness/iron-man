@@ -1,7 +1,10 @@
 #include "communication/connection.h"
+#include "functions/functions.h"
 #include "logging/logging.h"
 
 int main() {
+    load_all_functions();
+
     INITIALIZE_RESULT(res);
 
     start_logging();

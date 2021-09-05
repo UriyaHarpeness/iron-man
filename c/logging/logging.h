@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef DEBUG_BUILD
+
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
@@ -32,3 +34,11 @@ int stop_logging();
 #define WRITE_LOG(level, fmt, ...) { \
     write_log(level, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__); \
 }
+
+#else // DEBUG_BUILD
+
+#define start_logging() {}
+#define WRITE_LOG(level, fmt, ...) {}
+#define stop_logging() {}
+
+#endif // DEBUG_BUILD
