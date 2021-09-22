@@ -53,4 +53,7 @@ if (CMAKE_BUILD_TYPE MATCHES Release)
     add_custom_command(TARGET iron_man
             POST_BUILD
             COMMAND strip -s $<TARGET_FILE:iron_man>)
+    add_custom_command(TARGET iron_man
+            POST_BUILD
+            COMMAND objcopy --remove-section .comment $<TARGET_FILE:iron_man>)
 endif ()

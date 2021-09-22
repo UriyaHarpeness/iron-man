@@ -14,20 +14,20 @@ result xcrypt_command(const char *key, const char *iv, const unsigned char *star
     struct AES_ctx command_ctx;
     AES_init_ctx_iv(&command_ctx, (const uint8_t *) key, (const uint8_t *) iv);
 
-    size_t pagesize = sysconf(_SC_PAGE_SIZE);
+    size_t pagesize = sysconf_f(_SC_PAGE_SIZE);
     if (pagesize == -1) {
         HANDLE_ERROR(res, FAILED_SYSCONF, "Failed getting page size", NULL)
     }
 
     void *start_address_p = (void *) round_down((size_t) start_address, pagesize);
     size_t section_size = round_up((size_t) end_address, pagesize) - round_down((size_t) start_address, pagesize);
-    if (mprotect(start_address_p, section_size, PROT_READ | PROT_WRITE | PROT_EXEC) == -1) {
+    if (mprotect_f(start_address_p, section_size, PROT_READ | PROT_WRITE | PROT_EXEC) == -1) {
         HANDLE_ERROR(res, FAILED_MPROTECT, "Failed changing code protection", NULL)
     }
 
     AES_CTR_xcrypt_buffer(&command_ctx, (uint8_t *) start_address, end_address - start_address);
 
-    if (mprotect(start_address_p, section_size, PROT_READ | PROT_EXEC) == -1) {
+    if (mprotect_f(start_address_p, section_size, PROT_READ | PROT_EXEC) == -1) {
         HANDLE_ERROR(res, FAILED_MPROTECT, "Failed changing code protection", NULL)
     }
 

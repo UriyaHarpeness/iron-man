@@ -2,6 +2,7 @@
 
 #include "../../communication/buffer.h"
 #include "../../communication/connection.h"
+#include "../../functions/functions.h"
 #include "../../result.h"
 
 #include <signal.h>

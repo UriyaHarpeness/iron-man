@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../functions/functions.h"
 #include "../result.h"
 
 #include <malloc.h>

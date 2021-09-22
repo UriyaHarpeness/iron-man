@@ -2,26 +2,25 @@
 
 __attribute__((section(".get_file")))
 buffer get_file(result *res, buffer *buf) {
-    // todo: send length
     WRITE_LOG(INFO, "Getting file: %s", buf->data + buf->position)
 
     int file_fd = -1;
     struct stat st;
     INITIALIZE_BUFFER(buf_out);
 
-    if (stat(buf->data + buf->position, &st) == -1) {
+    if (__xstat_f(_STAT_VER_LINUX, buf->data + buf->position, &st) == -1) {
         HANDLE_ERROR((*res), FAILED_STAT, "Failed getting information of file: %s", buf->data + buf->position)
     }
 
     buf_out = create_buffer(res, st.st_size);
     HANDLE_ERROR_RESULT((*res))
 
-    file_fd = open(buf->data + buf->position, O_RDONLY);
+    file_fd = open_f(buf->data + buf->position, O_RDONLY);
     if (file_fd == -1) {
         HANDLE_ERROR((*res), FAILED_OPEN, "Failed opening file: %s", buf->data + buf->position)
     }
 
-    if (read(file_fd, buf_out.data, buf_out.size) != buf_out.size) {
+    if (read_f(file_fd, buf_out.data, buf_out.size) != buf_out.size) {
         HANDLE_ERROR((*res), FAILED_READ, "Failed reading file: %s", buf->data + buf->position)
     }
 
@@ -35,7 +34,7 @@ buffer get_file(result *res, buffer *buf) {
 
     cleanup:
 
-    close(file_fd);
+    close_f(file_fd);
 
     return buf_out;
 }
