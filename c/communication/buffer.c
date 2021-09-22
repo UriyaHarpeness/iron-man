@@ -3,7 +3,7 @@
 void reuse_buffer(result *res, buffer *buf, size_t size) {
     destroy_buffer(buf);
     buf->size = size;
-    buf->data = malloc(buf->size);
+    buf->data = malloc_f(buf->size);
     if (buf->data == NULL) {
         HANDLE_ERROR((*res), FAILED_MALLOC, "Failed allocating buffer", NULL)
     }
@@ -36,7 +36,7 @@ buffer create_buffer(result *res, size_t size) {
 }
 
 void destroy_buffer(buffer *buf) {
-    free(buf->data);
+    free_f(buf->data);
     buf->size = 0;
     buf->position = 0;
     buf->data = NULL;

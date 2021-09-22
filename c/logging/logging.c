@@ -1,5 +1,7 @@
 #include "logging.h"
 
+#ifdef DEBUG_BUILD
+
 int logger_fd = -1;
 char level_names[6][11] = {"TRACE     ",
                            "DEBUG     ",
@@ -8,13 +10,18 @@ char level_names[6][11] = {"TRACE     ",
                            "ERROR ",
                            "CRITICAL  "};
 
-int start_logging() {
+result start_logging() {
+    INITIALIZE_RESULT(res);
 #if LOG_TO_STDOUT
-    logger_fd = 1;
+    logger_fd = STDOUT_FILENO;
 #else
-    logger_fd = open(LOG_PATH, O_TRUNC | O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+    logger_fd = open_f(LOG_PATH, O_TRUNC | O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
 #endif // LOG_TO_STDOUT
-    return logger_fd;
+
+    if (logger_fd == -1) {
+        SET_ERROR(res, FAILED_OPEN)
+    }
+    return res;
 }
 
 int write_log(enum log_levels level, const char *file, const char *func, unsigned int line, char const *fmt, ...) {
@@ -47,9 +54,17 @@ int write_log(enum log_levels level, const char *file, const char *func, unsigne
     return bytes_written;
 }
 
-int stop_logging() {
+void stop_logging() {
 #if !LOG_TO_STDOUT
-    logger_fd = close(logger_fd);
+    logger_fd = close_f(logger_fd);
 #endif // !LOG_TO_STDOUT
-    return logger_fd;
 }
+
+#else // DEBUG_BUILD
+
+result start_logging() {
+    INITIALIZE_RESULT(res);
+    return res;
+}
+
+#endif // DEBUG_BUILD

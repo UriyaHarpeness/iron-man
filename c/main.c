@@ -1,10 +1,15 @@
 #include "communication/connection.h"
+#include "functions/functions.h"
 #include "logging/logging.h"
 
 int main() {
     INITIALIZE_RESULT(res);
 
-    start_logging();
+    res = load_all_functions();
+    HANDLE_ERROR_RESULT(res)
+
+    res = start_logging();
+    HANDLE_ERROR_RESULT(res)
 
     WRITE_LOG(CRITICAL, "Started Iron Man", NULL)
 

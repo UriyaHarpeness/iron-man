@@ -8,7 +8,7 @@ struct AES_ctx ctx;
 
 void read_into_buffer(result *res, buffer *buf) {
     char buf_size[8];
-    if (read(connection_fd, buf_size, 8) != 8) {
+    if (read_f(connection_fd, buf_size, 8) != 8) {
         HANDLE_ERROR((*res), FAILED_READ, "Failed reading from socket", NULL)
     }
     AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) buf_size, sizeof(buf_size));
@@ -16,7 +16,7 @@ void read_into_buffer(result *res, buffer *buf) {
     reuse_buffer(res, buf, char_to_uint64(buf_size));
     HANDLE_ERROR_RESULT((*res))
 
-    if (read(connection_fd, buf->data, buf->size) != buf->size) {
+    if (read_f(connection_fd, buf->data, buf->size) != buf->size) {
         HANDLE_ERROR((*res), FAILED_READ, "Failed reading from socket", NULL)
     }
     AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) buf->data, buf->size);
@@ -44,12 +44,12 @@ result send_string(char *string, uint64_t size) {
 
     uint64_to_char(size, size_);
     AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) size_, 8);
-    if (write(connection_fd, size_, 8) != 8) {
+    if (write_f(connection_fd, size_, 8) != 8) {
         HANDLE_ERROR(res, FAILED_WRITE, "Failed writing to socket", NULL)
     }
 
     AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) string, size);
-    if (write(connection_fd, string, size) != size) {
+    if (write_f(connection_fd, string, size) != size) {
         HANDLE_ERROR(res, FAILED_WRITE, "Failed writing to socket", NULL)
     }
 
@@ -73,7 +73,7 @@ result send_result(result res) {
     unsigned_int_to_char(res.code, values);
     unsigned_int_to_char(res.errno_value, values + 4);
     AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) values, 8);
-    if (write(connection_fd, values, 8) != 8) {
+    if (write_f(connection_fd, values, 8) != 8) {
         HANDLE_ERROR(res_, FAILED_WRITE, "Failed writing to socket", NULL)
     }
 
@@ -92,30 +92,30 @@ result connect_() {
     INITIALIZE_RESULT(res);
     INITIALIZE_BUFFER(buf);
 
-    socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    socket_fd = socket_f(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (-1 == socket_fd) {
         HANDLE_ERROR(res, FAILED_SOCKET, "Failed creating socket", NULL)
     }
     WRITE_LOG(DEBUG, "Created socket", NULL)
-    bzero(&server_address, sizeof(server_address));
+    bzero_f(&server_address, sizeof(server_address));
 
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = htonl(INADDR_ANY);
     server_address.sin_port = htons(PORT);
 
-    if (bind(socket_fd, (struct sockaddr *) &server_address, sizeof(server_address)) != 0) {
+    if (bind_f(socket_fd, (struct sockaddr *) &server_address, sizeof(server_address)) != 0) {
         HANDLE_ERROR(res, FAILED_BIND, "Failed binding socket", NULL)
     }
     WRITE_LOG(DEBUG, "Bound socket", NULL)
 
-    if (listen(socket_fd, 0) == -1) {
+    if (listen_f(socket_fd, 0) == -1) {
         HANDLE_ERROR(res, FAILED_LISTEN, "Failed listening on socket", NULL)
     }
     WRITE_LOG(DEBUG, "Listening on socket", NULL)
 
     client_address_len = sizeof(client_address);
 
-    connection_fd = accept(socket_fd, (struct sockaddr *) &client_address, &client_address_len);
+    connection_fd = accept_f(socket_fd, (struct sockaddr *) &client_address, &client_address_len);
     if (-1 == connection_fd) {
         HANDLE_ERROR(res, FAILED_ACCEPT, "Failed accepting connection", NULL)
     }
@@ -162,7 +162,7 @@ result communicate() {
         HANDLE_ERROR_RESULT(res)
 
         uint64_t command_id = read_uint64_t(&res, &buf);
-        HANDLE_ERROR_RESULT(res);
+        HANDLE_ERROR_RESULT(res)
         if (command_id == 0) {
             WRITE_LOG(INFO, "Gracefully disconnecting", NULL)
             break;
@@ -193,6 +193,6 @@ result communicate() {
 }
 
 void disconnect() {
-    close(connection_fd);
-    close(socket_fd);
+    close_f(connection_fd);
+    close_f(socket_fd);
 }

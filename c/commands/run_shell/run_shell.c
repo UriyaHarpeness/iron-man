@@ -27,7 +27,7 @@ buffer run_shell(result *res, buffer *buf) {
     WRITE_LOG(INFO, "Running file: %s, with %u args", command, args_num)
 
     // Preparing arguments for the command.
-    args = malloc(sizeof(char *) * (args_num + 2));
+    args = malloc_f(sizeof(char *) * (args_num + 2));
     if (args == NULL) {
         HANDLE_ERROR((*res), FAILED_MALLOC, "Failed allocating buffer", NULL)
     }
@@ -41,43 +41,43 @@ buffer run_shell(result *res, buffer *buf) {
     }
     args[args_num + 1] = NULL;
 
-    if (pipe(fds[CHILD]) == -1) {
+    if (pipe_f(fds[CHILD]) == -1) {
         HANDLE_ERROR((*res), FAILED_PIPE, "Failed piping child fds", NULL)
     }
-    if (pipe(fds[PARENT]) == -1) {
+    if (pipe_f(fds[PARENT]) == -1) {
         HANDLE_ERROR((*res), FAILED_PIPE, "Failed piping parent fds", NULL)
     }
 
-    new_pid = fork();
+    new_pid = fork_f();
     if (-1 == new_pid) {
         HANDLE_ERROR((*res), FAILED_FORK, "Failed spawning child process", NULL)
     }
 
     if (0 == new_pid) {
         // Child process.
-        close(fds[CHILD][WRITE]);
-        close(fds[PARENT][READ]);
-        close(STDOUT_FILENO);
-        close(STDIN_FILENO);
-        close(STDERR_FILENO);
-        if (dup2(fds[CHILD][READ], STDIN_FILENO) == -1) {
+        close_f(fds[CHILD][WRITE]);
+        close_f(fds[PARENT][READ]);
+        close_f(STDOUT_FILENO);
+        close_f(STDIN_FILENO);
+        close_f(STDERR_FILENO);
+        if (dup2_f(fds[CHILD][READ], STDIN_FILENO) == -1) {
             WRITE_LOG(ERROR, "Failed dup2", NULL)
         }
-        if (dup2(fds[PARENT][WRITE], STDOUT_FILENO) == -1) {
+        if (dup2_f(fds[PARENT][WRITE], STDOUT_FILENO) == -1) {
             WRITE_LOG(ERROR, "Failed dup2", NULL)
         }
-        if (dup2(fds[PARENT][WRITE], STDERR_FILENO) == -1) {
+        if (dup2_f(fds[PARENT][WRITE], STDERR_FILENO) == -1) {
             WRITE_LOG(ERROR, "Failed dup2", NULL)
         }
 
-        execvp(command, (char *const *) args);
+        execvp_f(command, (char *const *) args);
         WRITE_LOG(ERROR, "Failed executing file %s", command)
-        exit(128);
+        exit_f(128);
     }
 
     // Parent process.
-    close(fds[CHILD][READ]);
-    close(fds[PARENT][WRITE]);
+    close_f(fds[CHILD][READ]);
+    close_f(fds[PARENT][WRITE]);
 
     fd_set read_fds;
     struct timeval tv;
@@ -90,26 +90,26 @@ buffer run_shell(result *res, buffer *buf) {
     WRITE_LOG(INFO, "Created child process: %d", new_pid)
 
     // todo: maybe check with WIFEXITED(wstatus), but not necessarily.
-    while ((waitpid(new_pid, &child_exit_status, WNOHANG) != -1) && (killed_child == 0)) {
+    while ((waitpid_f(new_pid, &child_exit_status, WNOHANG) != -1) && (killed_child == 0)) {
         tv.tv_sec = 0;
         tv.tv_usec = 1000000;
         while (1) {
             FD_ZERO(&read_fds);
             FD_SET(fds[PARENT][READ], &read_fds);
             FD_SET(connection_fd, &read_fds);
-            select_result = select(((fds[PARENT][READ] > connection_fd) ? fds[PARENT][READ] : connection_fd) + 1,
-                                   &read_fds, NULL, NULL, &tv);
+            select_result = select_f(((fds[PARENT][READ] > connection_fd) ? fds[PARENT][READ] : connection_fd) + 1,
+                                     &read_fds, NULL, NULL, &tv);
 
             if (-1 == select_result) {
                 HANDLE_ERROR((*res), FAILED_SELECT, "Failed select", NULL)
             } else if (select_result) {
                 if (FD_ISSET(fds[PARENT][READ], &read_fds)) {
-                    len = read(fds[PARENT][READ], command_output, 4096);
+                    len = read_f(fds[PARENT][READ], command_output, 4096);
                     command_output[len] = 0;
                     WRITE_LOG(INFO, "Read output of %zu bytes: %s", len, command_output)
                     *res = send_string(command_output, len);
                     HANDLE_ERROR_RESULT((*res))
-                    if (len == 0 && waitpid(new_pid, &child_exit_status, WNOHANG) != -1) {
+                    if (len == 0 && waitpid_f(new_pid, &child_exit_status, WNOHANG) != -1) {
                         WRITE_LOG(INFO, "Child process has exited with status: %d", WEXITSTATUS(child_exit_status))
                         killed_child = 1;
                         break;
@@ -123,7 +123,7 @@ buffer run_shell(result *res, buffer *buf) {
                     if (0 == input_length) {
                         // Stop the child process.
                         WRITE_LOG(INFO, "Killing child process", NULL)
-                        if (kill(new_pid, SIGTERM) == -1) {
+                        if (kill_f(new_pid, SIGTERM) == -1) {
                             HANDLE_ERROR((*res), FAILED_KILL, "Failed killing child process", NULL)
                         }
                         killed_child = 1;
@@ -134,8 +134,8 @@ buffer run_shell(result *res, buffer *buf) {
                     input = read_string(res, &input_buf, input_length);
                     HANDLE_ERROR_RESULT((*res))
                     WRITE_LOG(INFO, "Writing input of %zu bytes: %s", input_length, input)
-                    write(fds[CHILD][WRITE], input, input_length);
-                    write(fds[CHILD][WRITE], "\n", 1);
+                    write_f(fds[CHILD][WRITE], input, input_length);
+                    write_f(fds[CHILD][WRITE], "\n", 1);
                 }
             } else {
                 break;
@@ -158,20 +158,20 @@ buffer run_shell(result *res, buffer *buf) {
     error_cleanup:
 
     if (0 != new_pid) {
-        kill(new_pid, SIGTERM);
-        waitpid(new_pid, &child_exit_status, WNOHANG);
+        kill_f(new_pid, SIGTERM);
+        waitpid_f(new_pid, &child_exit_status, WNOHANG);
     }
 
     destroy_buffer(&buf_out);
 
     cleanup:
 
-    close(fds[CHILD][WRITE]);
-    close(fds[PARENT][READ]);
+    close_f(fds[CHILD][WRITE]);
+    close_f(fds[PARENT][READ]);
 
     destroy_buffer(&input_buf);
 
-    free(args);
+    free_f(args);
 
     return buf_out;
 }

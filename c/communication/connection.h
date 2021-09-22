@@ -3,6 +3,7 @@
 #include "buffer.h"
 #include "../commands/commands.h"
 #include "../consts.h"
+#include "../functions/functions.h"
 #include "../logging/logging.h"
 #include "../result.h"
 #include "../tiny-aes/aes.h"

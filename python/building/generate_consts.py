@@ -21,6 +21,10 @@ def generate_randoms(match) -> str:
     return ', '.join([hex(value) for value in generated])
 
 
+def generate_from_template(template: str) -> str:
+    return re.sub(r'/\*(\w+): (\d+) random (\w+)\*/', generate_randoms, template)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Post build script for Iron Man.')
 
@@ -31,7 +35,7 @@ def main():
 
     args = parser.parse_args()
 
-    print(f'Generating from template: {args.template.resolve().absolute()}')
+    print(f'Generating consts from template: {args.template.resolve().absolute()}')
 
     global GENERATED
     GENERATED = {}
@@ -39,7 +43,7 @@ def main():
     with args.template.open() as f:
         template = f.read()
 
-    generated_file = re.sub(r'/\*(\w+): (\d+) random (\w+)\*/', generate_randoms, template)
+    generated_file = generate_from_template(template)
 
     with args.config.open('w+') as f:
         json.dump({'generated_consts': GENERATED}, f, indent=2)
