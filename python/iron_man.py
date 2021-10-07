@@ -49,7 +49,8 @@ class IronMan:
     def __init__(self, config_path: pathlib.Path):
         with config_path.open() as config:
             self.config = json.load(config)
-        self.ctx = AES_init_ctx_iv(self.config['generated_consts']['key'], self.config['generated_consts']['iv'])
+        self.ctx = AES_init_ctx_iv(self.config['generated_consts']['communication_key'],
+                                   self.config['generated_consts']['communication_iv'])
         self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connection.connect((self.HOST, self.PORT))
         self.send('Q', self.config['generated_consts']['handshake'][0])
@@ -150,10 +151,10 @@ class IronMan:
 def main():
     iron_man = IronMan(pathlib.Path('config.json'))
 
+    data = iron_man.get_file('/c/projects/iron-man/c/main.c')
     iron_man.run_shell('wot')
     iron_man.run_shell('sleep', ['1'])
-    iron_man.run_shell('sh')
-    data = iron_man.get_file('/c/projects/iron-man/c/main.c')
+    iron_man.run_shell('ls')
     iron_man.put_file('/c/projects/iron-man/c/main.u', data)
     iron_man.get_file('/c/projects/iron-man/python/main.py')
     try:

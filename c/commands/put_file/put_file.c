@@ -10,7 +10,6 @@ buffer put_file(result *res, buffer *buf) {
 
     WRITE_LOG(INFO, "Putting file: %s", buf->data + buf->position)
 
-
     file_fd = open_f(buf->data + buf->position, O_TRUNC | O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
     if (file_fd == -1) {
         HANDLE_ERROR((*res), FAILED_OPEN, "Failed opening file: %s", buf->data + buf->position)

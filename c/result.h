@@ -1,7 +1,5 @@
 #pragma once
 
-#include "logging/logging.h"
-
 #include <errno.h>
 #include <stdint.h>
 

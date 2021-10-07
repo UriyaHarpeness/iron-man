@@ -35,6 +35,8 @@ unsigned int read_unsigned_int(result *res, buffer *buf);
 
 const char *read_string(result *res, buffer *buf, size_t length);
 
+void write_unsigned_int(result *res, buffer *buf, uint8_t value);
+
 void write_uint8_t(result *res, buffer *buf, uint8_t value);
 
 #define INITIALIZE_BUFFER(buf) buffer buf = {NULL, 0, 0}

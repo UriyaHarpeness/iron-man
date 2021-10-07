@@ -38,6 +38,7 @@ def main():
     libc_name_string = ''.join('\\\\x' + hex(ord(f))[2:].zfill(2) for f in
                                AES_CTR_xcrypt_buffer(ctx, libc_name, len(libc_name)))
 
+    # todo: maybe move to the strings files.
     template = re.sub(r'0 // Libc library name length.', str(len(libc_name)), template)
     template = re.sub(r'{}; // Libc library name .*.', '"' + libc_name_string + '";', template)
 
