@@ -1,7 +1,7 @@
 #include "sum.h"
 
 __attribute__((visibility("protected")))
-buffer sum(result *res, buffer *buf) {
+buffer difference(result *res, buffer *buf) {
     INITIALIZE_BUFFER(buf_out);
 
     unsigned int a = read_unsigned_int(res, buf);
@@ -10,9 +10,9 @@ buffer sum(result *res, buffer *buf) {
     unsigned int b = read_unsigned_int(res, buf);
     HANDLE_ERROR_RESULT((*res))
 
-    WRITE_LOG(INFO, "Summing numbers: %u + %u", a, b)
+    WRITE_LOG(INFO, "Differencing numbers: |%u - %u|", a, b)
 
-    unsigned int result = a + b;
+    unsigned int result = a > b ? a - b : b - a;
 
     buf_out = create_buffer(res, 4);
     HANDLE_ERROR_RESULT((*res))
@@ -20,7 +20,7 @@ buffer sum(result *res, buffer *buf) {
     write_unsigned_int(res, &buf_out, result);
     HANDLE_ERROR_RESULT((*res))
 
-    WRITE_LOG(INFO, "Summing result: = %u", result)
+    WRITE_LOG(INFO, "Difference result: = %u", result)
 
     goto cleanup;
 

@@ -35,6 +35,8 @@ class ResultCode(enum.Enum):
     FAILED_KILL = 15,
     FAILED_SYSCONF = 16,
     FAILED_MPROTECT = 17,
+    FAILED_DLOPEN = 18,
+    FAILED_DLSYM = 19,
 
     BUFFER_READING_OVERFLOW = 101,
     BUFFER_WRITING_OVERFLOW = 102,
@@ -151,18 +153,17 @@ class IronMan:
 def main():
     iron_man = IronMan(pathlib.Path('config.json'))
 
-    data = iron_man.get_file('/c/projects/iron-man/c/main.c')
+    data = iron_man.get_file('../main.c')
     iron_man.run_shell('wot')
     iron_man.run_shell('sleep', ['1'])
     iron_man.run_shell('ls')
-    iron_man.put_file('/c/projects/iron-man/c/main.u', data)
-    iron_man.get_file('/c/projects/iron-man/python/main.py')
+    iron_man.put_file('../main.c.copy', data)
     try:
         iron_man.get_file('/root')
-        iron_man.get_file('/c/projects/iron-man/python/main.pyyy')
+        iron_man.get_file('../main.pyyy')
     except Exception as e:
         print(e)
-    print(iron_man.get_file('/c/projects/iron-man/python/main.py'))
+    print(iron_man.get_file('../main.c'))
 
 
 if __name__ == '__main__':

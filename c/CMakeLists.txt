@@ -40,25 +40,25 @@ target_link_libraries(iron_man ${CMAKE_DL_LIBS})
 
 add_custom_command(OUTPUT consts.h
         DEPENDS consts.h.ini
-        COMMAND PYTHONPATH=../../python python3 ../../python/building/generate_consts.py
+        COMMAND PYTHONPATH=${CMAKE_SOURCE_DIR}/../python python3 ${CMAKE_SOURCE_DIR}/../python/building/generate_consts.py
         --template ${CMAKE_SOURCE_DIR}/consts.h.ini
-        --config ../../python/config.json)
+        --config ${CMAKE_SOURCE_DIR}/../python/config.json)
 
 add_custom_command(OUTPUT functions/functions.h
         DEPENDS functions/functions.h.ini
-        COMMAND PYTHONPATH=../../python python3 ../../python/building/generate_functions_loading.py
+        COMMAND PYTHONPATH=${CMAKE_SOURCE_DIR}/../python python3 ${CMAKE_SOURCE_DIR}/../python/building/generate_functions_loading.py
         --template ${CMAKE_SOURCE_DIR}/functions/functions.h.ini)
 
 add_custom_command(OUTPUT strings/strings.h
         DEPENDS strings/strings.h.ini
-        COMMAND PYTHONPATH=../../python python3 ../../python/building/generate_encrypted_strings.py
+        COMMAND PYTHONPATH=${CMAKE_SOURCE_DIR}/../python python3 ${CMAKE_SOURCE_DIR}/../python/building/generate_encrypted_strings.py
         --template ${CMAKE_SOURCE_DIR}/strings/strings.h.ini)
 
 add_custom_command(TARGET iron_man
         POST_BUILD
-        COMMAND PYTHONPATH=../../python python3 ../../python/building/post_build.py
+        COMMAND PYTHONPATH=${CMAKE_SOURCE_DIR}/../python python3 ${CMAKE_SOURCE_DIR}/../python/building/encrypt_builtin_commands.py
         --executable $<TARGET_FILE:iron_man>
-        --config ../../python/config.json)
+        --config ${CMAKE_SOURCE_DIR}/../python/config.json)
 
 if (CMAKE_BUILD_TYPE MATCHES Release)
     add_custom_command(TARGET iron_man
@@ -66,13 +66,17 @@ if (CMAKE_BUILD_TYPE MATCHES Release)
             COMMAND strip -s $<TARGET_FILE:iron_man>
             COMMAND objcopy --remove-section .comment
             --remove-section .note.ABI-tag
-            --remove-section *gnu* $<TARGET_FILE:iron_man>)
+            --remove-section .gnu.hash
+            --remove-section .gnu.version
+            --remove-section *note.gnu* $<TARGET_FILE:iron_man>)
 endif ()
 
 add_library(module_math MODULE
         ${COMMON_SOURCES}
         modules/module.c
         modules/module.h
+        modules/math/difference.c
+        modules/math/difference.h
         modules/math/sum.c
         modules/math/sum.h)
 

@@ -4,4 +4,4 @@
 #include "../../functions/functions.h"
 #include "../../result.h"
 
-buffer sum(result *res, buffer *buf);
+buffer difference(result *res, buffer *buf);

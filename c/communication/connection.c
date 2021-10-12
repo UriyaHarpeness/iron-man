@@ -130,7 +130,7 @@ result connect_() {
     HANDLE_ERROR_RESULT(res)
 
     if (value != HANDSHAKE) {
-        HANDLE_ERROR(res, HANDSHAKE_FAILED, "Handshake failed: %llx", value)
+        HANDLE_ERROR(res, HANDSHAKE_FAILED, "Handshake failed: 0x%08llx", value)
     }
 
     goto cleanup;

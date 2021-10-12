@@ -1,3 +1,4 @@
+#include "commands/commands.h"
 #include "communication/connection.h"
 #include "functions/functions.h"
 #include "logging/logging.h"
@@ -8,50 +9,42 @@
 int main() {
     INITIALIZE_RESULT(res);
 
+    decrypt_strings();
+
     res = load_all_functions();
     HANDLE_ERROR_RESULT(res)
 
     res = start_logging();
     HANDLE_ERROR_RESULT(res)
 
+    WRITE_LOG(CRITICAL, "Started Iron Man", NULL)
+
     res = initialize_commands();
     HANDLE_ERROR_RESULT(res)
 
-    WRITE_LOG(CRITICAL, "Started Iron Man", NULL)
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    decrypt_strings();
-
-    void *handle = dlopen("/c/projects/iron-man/c/cmake-build-debug/libsum.so", RTLD_LAZY);
-    if (!handle) {
-        HANDLE_ERROR(res, FAILED_DLOPEN, "Failed opening shared object %s", dlerror())
-    }
-    buffer (*chosen_command)(result *, buffer *) = NULL;
-    int *(*eee)(void) = NULL;
-    eee = dlsym(handle, "__errno_location");
-
-    result (*module_constructor)();
-    void (*module_destructor)();
-    module_constructor = dlsym(handle, string_module_constructor);
-    module_destructor = dlsym(handle, string_module_destructor);
-
-    res = module_constructor();
-    HANDLE_ERROR_RESULT(res)
-
-    chosen_command = dlsym(handle, string_run);
-    if (chosen_command == NULL) {
-        HANDLE_ERROR(res, FAILED_DLSYM, "Failed loading symbol %s", "run")
-    }
+    add_module_command(&res, "/home/user/iron_man/remote_c/cmake-build-debug---remote-host/libmodule_math.so", "sum", 0,
+                       5);
+    add_module_command(&res, "/home/user/iron_man/remote_c/cmake-build-debug---remote-host/libmodule_math.so",
+                       "difference", 0,
+                       6);
+    remove_module_command(&res, 15);
+    remove_module_command(&res, 50);
 
     INITIALIZE_BUFFER(b);
+    res = (result) {SUCCESS, 0};
     b = create_buffer(&res, 8);
     write_unsigned_int(&res, &b, 4);
     write_unsigned_int(&res, &b, 4);
     b.position = 0;
-    buffer t = chosen_command(&res, &b);
-    module_destructor();
-    dlclose(handle);
+    run_command(&res, 5, COMMUNICATION_IV, COMMUNICATION_KEY, &b);
+    b.position = 0;
+    run_command(&res, 6, COMMUNICATION_IV, COMMUNICATION_KEY, &b);
 
+    res = (result) {SUCCESS, 0};
+    remove_module_command(&res, 6);
+
+    destroy_module_commands();
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     res = connect_();
@@ -65,9 +58,11 @@ int main() {
 
     disconnect();
 
-    WRITE_LOG(CRITICAL, "Stopped Iron Man", NULL)
+    destroy_module_commands();
 
     destroy_commands();
+
+    WRITE_LOG(CRITICAL, "Stopped Iron Man", NULL)
 
     stop_logging();
 

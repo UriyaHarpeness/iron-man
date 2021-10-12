@@ -7,9 +7,8 @@ result load_all_functions() {
 
     struct AES_ctx functions_ctx;
     AES_init_ctx_iv(&functions_ctx, FUNCTION_NAMES_KEY, FUNCTION_NAMES_IV);
-    AES_CTR_xcrypt_buffer(&functions_ctx, (uint8_t *) libc_name, LIBC_NAME_LENGTH);
 
-    void *handle = dlopen(libc_name, RTLD_LAZY);
+    void *handle = dlopen(string_libc_so_6, RTLD_LAZY);
     if (!handle) {
         HANDLE_ERROR(res, FAILED_DLOPEN, "Failed opening shared object", NULL)
     }

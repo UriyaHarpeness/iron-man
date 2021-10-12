@@ -19,7 +19,7 @@ def main():
 
     args = parser.parse_args()
 
-    print(f'Post build for: {args.executable.resolve().absolute()}')
+    print(f'Encrypting builtin commands for: {args.executable.resolve().absolute()}')
     nm_output = subprocess.check_output(f'nm -S {args.executable}', shell=True).decode('utf-8').splitlines()
     nm_output = {x.split()[-1]: x.split() for x in nm_output}
     commands = {command: (int(nm_output[f'__{command}_start'][0], 16), int(nm_output[f'__{command}_end'][0], 16))

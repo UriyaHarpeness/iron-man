@@ -9,11 +9,16 @@
 
 result initialize_commands();
 
-void add_command(result *res, const char *module_path);
-
-void destroy_commands();
+void add_module_command(result *res, const char *module_path, const char *function_name, uint64_t function_size,
+                        uint64_t command_id);
 
 result xcrypt_command(const char *key, const char *iv, const unsigned char *start_address,
                       const unsigned char *end_address);
 
 buffer run_command(result *res, uint64_t command_id, const char *key, const char *iv, buffer *buf);
+
+void remove_module_command(result *res, uint64_t command_id);
+
+void destroy_module_commands();
+
+void destroy_commands();

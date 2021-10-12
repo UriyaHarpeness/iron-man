@@ -1,10 +1,7 @@
 import argparse
-import json
-import random
 import re
 
 import pathlib
-from functools import partial
 
 from building import generate_consts
 from tiny_aes import AES_init_ctx_iv, AES_CTR_xcrypt_buffer
@@ -33,14 +30,6 @@ def main():
 
     ctx = AES_init_ctx_iv(generate_consts.GENERATED['function_names_key'],
                           generate_consts.GENERATED['function_names_iv'])
-
-    libc_name = re.findall(r'{}; // Libc library name - "(.*?)".', template)[0]
-    libc_name_string = ''.join('\\\\x' + hex(ord(f))[2:].zfill(2) for f in
-                               AES_CTR_xcrypt_buffer(ctx, libc_name, len(libc_name)))
-
-    # todo: maybe move to the strings files.
-    template = re.sub(r'0 // Libc library name length.', str(len(libc_name)), template)
-    template = re.sub(r'{}; // Libc library name .*.', '"' + libc_name_string + '";', template)
 
     function_names_string = ''.join('\\\\x' + hex(ord(f))[2:].zfill(2) for f in
                                     AES_CTR_xcrypt_buffer(ctx, function_names_string, len(function_names_string)))

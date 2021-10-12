@@ -1,10 +1,7 @@
 import argparse
-import json
-import random
 import re
 
 import pathlib
-from functools import partial
 
 from building import generate_consts
 from tiny_aes import AES_init_ctx_iv, AES_CTR_xcrypt_buffer
@@ -38,12 +35,14 @@ def main():
                                 AES_CTR_xcrypt_buffer(ctx, joined_strings, len(joined_strings)))
     encrypted_strings_length = int(len(encrypted_strings) / 5)
 
-    template = re.sub(r'// Individual strings.', '\n'.join(f'const char *string_{string};' for string in strings),
-                      template)
+    variable_name_strings = [re.sub(r"\W", "_", string) for string in strings]
+    template = re.sub(r'// Individual strings.',
+                      '\n'.join(f'const char *string_{string};' for string in variable_name_strings), template)
     template = re.sub(r'0 // Strings number.', str(len(strings)), template)
     template = re.sub(r'0 // Encrypted strings length.', str(encrypted_strings_length), template)
     template = re.sub(r'{}; // Strings lengths.', '{' + ', '.join(str(len(s)) for s in strings) + '};', template)
-    template = re.sub(r'{}; // Strings.', '{' + ', '.join(f'&string_{s}' for s in strings) + '};', template)
+    template = re.sub(r'{}; // Strings.', '{' + ', '.join(f'&string_{s}' for s in variable_name_strings) + '};',
+                      template)
     template = re.sub(r'""; // Encrypted strings.', f'"' + encrypted_strings + '";', template)
 
     with args.template.resolve().absolute().with_suffix("").open('w+') as f:
