@@ -8,7 +8,7 @@ from tiny_aes import AES_init_ctx_iv, AES_CTR_xcrypt_buffer
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Post build script for Iron Man.')
+    parser = argparse.ArgumentParser(description='Generate functions loading script for Iron Man.')
 
     parser.add_argument('--template', dest='template', type=pathlib.Path, required=True,
                         help='Path to the file template.')

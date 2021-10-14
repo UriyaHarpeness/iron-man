@@ -163,9 +163,33 @@ result communicate() {
 
         uint64_t command_id = read_uint64_t(&res, &buf);
         HANDLE_ERROR_RESULT(res)
-        if (command_id == 0) {
+        if (command_id == DISCONNECT_COMMAND_ID) {
             WRITE_LOG(INFO, "Gracefully disconnecting", NULL)
             break;
+        }
+
+        if (command_id == ADD_MODULE_COMMAND_COMMAND_ID) {
+            add_module_command_from_buffer(&res, &buf);
+            HANDLE_ERROR_RESULT(res)
+
+            destroy_buffer(&buf);
+
+            tmp_res = send_result(res);
+            HANDLE_ERROR_RESULT(tmp_res)
+
+            continue;
+        }
+
+        if (command_id == REMOVE_MODULE_COMMAND_COMMAND_ID) {
+            remove_module_command_from_buffer(&res, &buf);
+            HANDLE_ERROR_RESULT(res)
+
+            destroy_buffer(&buf);
+
+            tmp_res = send_result(res);
+            HANDLE_ERROR_RESULT(tmp_res)
+
+            continue;
         }
 
         key = read_string(&res, &buf, KEY_LENGTH);

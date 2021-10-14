@@ -3,8 +3,8 @@
 #include "../functions/functions.h"
 #include "../result.h"
 
-#include <malloc.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 // todo: think about handling very large messages in separate buffers maybe.
 typedef struct buffer_s {

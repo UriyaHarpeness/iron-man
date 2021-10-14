@@ -1,16 +1,15 @@
+import enum
 import errno
+import json
 import os
+import pathlib
+import random
 import select
 import socket
 import struct
-
-import enum
 import sys
-from typing import List
 
-import pathlib
-
-import json
+from typing import Any, List
 
 from tiny_aes import AES_init_ctx_iv, AES_CTR_xcrypt_buffer
 
@@ -51,6 +50,7 @@ class IronMan:
     def __init__(self, config_path: pathlib.Path):
         with config_path.open() as config:
             self.config = json.load(config)
+        self.module_commands = {}
         self.ctx = AES_init_ctx_iv(self.config['generated_consts']['communication_key'],
                                    self.config['generated_consts']['communication_iv'])
         self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -65,13 +65,15 @@ class IronMan:
     def to_bytes(string: str, null_terminator: bool = False) -> bytes:
         return bytes([ord(c) for c in string] + ([0] if null_terminator else []))
 
-    def send(self, fmt: str, *args):
+    def send(self, fmt: str = None, *args: Any):
+        if fmt is None:
+            fmt = ''
         message = struct.pack('<' + fmt, *args)
         size = struct.pack('<Q', len(message))
         self.connection.send(bytes([ord(c) for c in AES_CTR_xcrypt_buffer(self.ctx, size, len(size))]))
         self.connection.send(bytes([ord(c) for c in AES_CTR_xcrypt_buffer(self.ctx, message, len(message))]))
 
-    def receive(self, fmt: str = None) -> str:
+    def receive(self, fmt: str = None) -> Any:
         size = self.connection.recv(8)
         size = struct.unpack('<Q', bytes([ord(c) for c in AES_CTR_xcrypt_buffer(self.ctx, size, len(size))]))[0]
         message = self.connection.recv(size)
@@ -85,12 +87,21 @@ class IronMan:
         code, errno_value = struct.unpack('<II', self.to_bytes(AES_CTR_xcrypt_buffer(self.ctx, result, len(result))))
         if code != 0:
             raise ValueError(
-                f'Got failed result: {ResultCode((code,)).name} [{errno.errorcode[errno_value]} - {os.strerror(errno_value)}]')
+                f'Got failed result: {ResultCode((code,)).name}' + (
+                    f'[{errno.errorcode[errno_value]} - {os.strerror(errno_value)}]' if errno_value != 0 else ''))
 
-    def send_run_command(self, command_name: str, fmt: str, *args):
+    def send_run_command(self, command_name: str, fmt: str, *args: Any):
         command_id = self.config['generated_consts'][command_name + '_command_id'][0]
         key = bytearray(self.config['commands'][command_name][0])
         iv = bytearray(self.config['commands'][command_name][1])
+
+        self.send(f'Q{len(key)}s{len(iv)}s' + fmt, command_id, key, iv, *args)
+
+    def send_run_module_command(self, command_name: str, fmt: str, *args: Any):
+        command_config = self.module_commands[command_name]
+        command_id = command_config['command_id']
+        key = bytearray(command_config['config']['key'])
+        iv = bytearray(command_config['config']['iv'])
 
         self.send(f'Q{len(key)}s{len(iv)}s' + fmt, command_id, key, iv, *args)
 
@@ -108,7 +119,7 @@ class IronMan:
         self.check_result()
         self.receive()
 
-    def run_shell(self, command: str, args: List[str] = None):
+    def run_shell(self, command: str, args: List[str] = None) -> int:
         args = args or []
         func_args = []
         for arg in args:
@@ -149,9 +160,57 @@ class IronMan:
         self.check_result()
         return self.receive('B')[0]
 
+    def run_module_command(self, function_name: str, *args: Any, arguments_format: str = None):
+        if arguments_format is None:
+            arguments_format = self.module_commands[function_name]['invocation']['arguments_format']
+        self.send_run_module_command(function_name, arguments_format, *args)
+        self.check_result()
+        return self.receive(self.module_commands[function_name]['invocation']['results_format'])
+
+    def add_module_command(self, module_path: pathlib.Path, function_name: str, module_config_path: pathlib.Path,
+                           arguments_format: str = None, results_format: str = None):
+        with module_config_path.open() as module_config:
+            function_config = json.load(module_config)[function_name]
+
+        command_id = random.randint(0, 2 ** 32 - 1)
+        self.module_commands[function_name] = {'config': function_config, 'command_id': command_id,
+                                               'invocation': {'arguments_format': arguments_format,
+                                                              'results_format': results_format}}
+        self.send(f'QI{len(str(module_path)) + 1}sI{len(function_name) + 1}sQQ',
+                  1, len(str(module_path)) + 1, self.to_bytes(str(module_path), True),
+                  len(function_name) + 1, self.to_bytes(function_name, True), function_config['size'], command_id)
+
+        self.check_result()
+
+        self.__setattr__(function_name, lambda *args, **kwargs: self.run_module_command(function_name, *args, **kwargs))
+
+    def remove_module_command(self, function_name: str):
+        self.send(f'QQ', 2, self.module_commands[function_name]['command_id'])
+
+        self.check_result()
+
+        self.module_commands.pop(function_name)
+        self.__delattr__(function_name)
+
+    # todo: add module commands support in iron_cmd
+
 
 def main():
-    iron_man = IronMan(pathlib.Path('config.json'))
+    iron_man = IronMan(pathlib.Path('iron_man_config.json'))
+
+    iron_man.add_module_command(
+        pathlib.Path('/home/user/iron_man/remote_c/cmake-build-debug---remote-host/libmodule_math.so'), 'sum',
+        pathlib.Path('module_config.json'), 'II', 'I')
+    iron_man.add_module_command(
+        pathlib.Path('/home/user/iron_man/remote_c/cmake-build-debug---remote-host/libmodule_math.so'), 'difference',
+        pathlib.Path('module_config.json'), 'II', 'I')
+    print(iron_man.sum(4, 4)[0])
+    print(iron_man.sum(4, 400)[0])
+    print(iron_man.sum(1000, 24)[0])
+    iron_man.remove_module_command('sum')
+    print(iron_man.difference(4, 4)[0])
+    print(iron_man.difference(4, 400)[0])
+    print(iron_man.difference(1000, 24)[0])
 
     data = iron_man.get_file('../main.c')
     iron_man.run_shell('wot')

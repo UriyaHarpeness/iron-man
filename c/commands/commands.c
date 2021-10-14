@@ -105,8 +105,8 @@ void add_module_command(result *res, const char *module_path, const char *functi
     *new_module = (module_command_definition) {
             .command_definition=(command_definition) {
                     .command_address=chosen_command,
-                    .command_start_address=chosen_command,
-                    .command_end_address=chosen_command + function_size,
+                    .command_start_address=(const unsigned char *) chosen_command,
+                    .command_end_address=(const unsigned char *) chosen_command + function_size,
                     .command_id=command_id
             },
             .library_handle=handle,
@@ -129,6 +129,28 @@ void add_module_command(result *res, const char *module_path, const char *functi
     }
 
     cleanup:
+
+    return;
+}
+
+void add_module_command_from_buffer(result *res, buffer *buf) {
+    unsigned int module_path_length = read_unsigned_int(res, buf);
+    HANDLE_ERROR_RESULT((*res))
+    const char *module_path = read_string(res, buf, module_path_length);
+    HANDLE_ERROR_RESULT((*res))
+    unsigned int function_name_length = read_unsigned_int(res, buf);
+    HANDLE_ERROR_RESULT((*res))
+    const char *function_name = read_string(res, buf, function_name_length);
+    HANDLE_ERROR_RESULT((*res))
+    uint64_t function_size = read_uint64_t(res, buf);
+    HANDLE_ERROR_RESULT((*res))
+    uint64_t command_id = read_uint64_t(res, buf);
+    HANDLE_ERROR_RESULT((*res))
+
+    add_module_command(res, module_path, function_name, function_size, command_id);
+    HANDLE_ERROR_RESULT((*res))
+
+    error_cleanup:
 
     return;
 }
@@ -249,6 +271,18 @@ void remove_module_command(result *res, uint64_t command_id) {
     *chosen_module_command = (*chosen_module_command)->next_module_command;
 
     WRITE_LOG(DEBUG, "Removed module command: 0x%08llx", command_id)
+
+    error_cleanup:
+
+    return;
+}
+
+void remove_module_command_from_buffer(result *res, buffer *buf) {
+    uint64_t command_id = read_uint64_t(res, buf);
+    HANDLE_ERROR_RESULT((*res))
+
+    remove_module_command(res, command_id);
+    HANDLE_ERROR_RESULT((*res))
 
     error_cleanup:
 
