@@ -160,12 +160,15 @@ class IronMan:
         self.check_result()
         return self.receive('B')[0]
 
-    def run_module_command(self, function_name: str, *args: Any, arguments_format: str = None):
+    def run_module_command(self, function_name: str, *args: Any, arguments_format: str = None,
+                           results_format: str = None):
         if arguments_format is None:
             arguments_format = self.module_commands[function_name]['invocation']['arguments_format']
+        if results_format is None:
+            results_format = self.module_commands[function_name]['invocation']['results_format']
         self.send_run_module_command(function_name, arguments_format, *args)
         self.check_result()
-        return self.receive(self.module_commands[function_name]['invocation']['results_format'])
+        return self.receive(results_format)
 
     def add_module_command(self, module_path: pathlib.Path, function_name: str, module_config_path: pathlib.Path,
                            arguments_format: str = None, results_format: str = None):

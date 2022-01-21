@@ -4,8 +4,10 @@ from cmd import Cmd
 import pathlib
 
 from iron_man import IronMan
+from struct_conversion import convert_to_types_by_format
 
 
+# todo: parse spaces, tabs, and ""s.
 class IronManShell(Cmd):
     intro = 'Welcome to Iron Man\'s shell.   Type help or ? to list commands.\n'
     prompt = '(iron man) '
@@ -15,14 +17,14 @@ class IronManShell(Cmd):
         self.im = None
 
     def onecmd(self, line):
-        """Interpret the argument as though it had been typed in response
+        """
+        Interpret the argument as though it had been typed in response
         to the prompt.
 
         This may be overridden, but should not normally need to be;
         see the precmd() and postcmd() methods for useful execution hooks.
         The return value is a flag indicating whether interpretation of
         commands by the interpreter should stop.
-
         """
         cmd, arg, line = self.parseline(line)
         if not line:
@@ -38,6 +40,8 @@ class IronManShell(Cmd):
             try:
                 func = getattr(self, 'do_' + cmd)
             except AttributeError:
+                if self.im and cmd in self.im.module_commands:
+                    return self.run_module_command(cmd, arg)
                 return self.default(line)
 
             if f'do_{cmd}' not in self.get_names():
@@ -49,6 +53,54 @@ class IronManShell(Cmd):
             except Exception as e:
                 traceback.print_tb(e.__traceback__)
                 print(e)
+
+    def do_help(self, arg):
+        """
+        List available commands with "help" or detailed help with "help cmd".
+        """
+        if arg:
+            # XXX check arg syntax
+            try:
+                func = getattr(self, 'help_' + arg)
+            except AttributeError:
+                try:
+                    doc = getattr(self, 'do_' + arg).__doc__
+                    if doc:
+                        self.stdout.write("%s\n" % str(doc))
+                        return
+                except AttributeError:
+                    pass
+                self.stdout.write("%s\n" % str(self.nohelp % (arg,)))
+                return
+            func()
+        else:
+            names = self.get_names()
+            cmds_doc = []
+            cmds_undoc = []
+            help = {}
+            for name in names:
+                if name[:5] == 'help_':
+                    help[name[5:]] = 1
+            names.sort()
+            # There can be duplicates if routines overridden
+            prevname = ''
+            for name in names:
+                if name[:3] == 'do_':
+                    if name == prevname:
+                        continue
+                    prevname = name
+                    cmd = name[3:]
+                    if cmd in help:
+                        cmds_doc.append(cmd)
+                        del help[cmd]
+                    elif getattr(self, name).__doc__:
+                        cmds_doc.append(cmd)
+                    else:
+                        cmds_undoc.append(cmd)
+            self.stdout.write("%s\n" % str(self.doc_leader))
+            self.print_topics(self.doc_header, cmds_doc, 15, 80)
+            self.print_topics(self.misc_header, list(help.keys()), 15, 80)
+            self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
     def get_names(self):
         return self.GENERAL_COMMANDS + (self.CONNECTED_COMMANDS if self.im else self.DISCONNECTED_COMMANDS)
@@ -81,10 +133,34 @@ class IronManShell(Cmd):
             args = [arg[:arg.find(' ')], arg[arg.find(' ') + 1:].split(' ')]
         print('Exit code:', self.im.run_shell(*args))
 
+    def do_add_module_command(self, arg: str):
+        """
+        Add a module command by module path, function name, module config path, arguments format, and results format.
+        """
+        args = arg.split(' ')
+        args += [None for _ in range(5 - len(args))]
+        self.im.add_module_command(pathlib.Path(args[0]), args[1], pathlib.Path(args[2]), args[3] or None,
+                                   args[4] or None)
+
+    # todo: try to support minimal help maybe for module commands.
+    # todo: support overriding arguments format and results format, like in the module itself.
+    def run_module_command(self, function_name: str, arg: str):
+        result = getattr(self.im, function_name)(
+            *convert_to_types_by_format(self.im.module_commands[function_name]['invocation']['arguments_format'],
+                                        *arg.split(' ')))
+        print('Result:', ', '.join(str(res) for res in result))
+
+    def do_remove_module_command(self, arg: str):
+        """
+        Remove a module command by function name.
+        """
+        self.im.remove_module_command(arg)
+
     def do_disconnect(self, _=None):
         """
         Disconnect from an Iron Man server.
         """
+        del self.im
         self.im = None
 
     def do_exit(self, _=None):
@@ -101,6 +177,8 @@ class IronManShell(Cmd):
     CONNECTED_COMMANDS = ['do_get_file',
                           'do_put_file',
                           'do_run_shell',
+                          'do_add_module_command',
+                          'do_remove_module_command',
                           'do_disconnect']
     GENERAL_COMMANDS = ['do_help',
                         'do_exit']

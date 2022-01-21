@@ -104,7 +104,7 @@ const char *read_string(result *res, buffer *buf, size_t length) {
     return value;
 }
 
-void write_unsigned_int(result *res, buffer *buf, uint8_t value) {
+void write_unsigned_int(result *res, buffer *buf, unsigned int value) {
     if ((buf->size - buf->position) < 4) {
         HANDLE_ERROR((*res), BUFFER_WRITING_OVERFLOW, "Buffer writing overflow", NULL)
     }
