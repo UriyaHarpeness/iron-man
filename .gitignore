@@ -3,7 +3,10 @@ cmake-build-release*/
 .idea/
 __pycache__/
 *.pyc
+python/.dcignore
 
 c/consts.h
 c/functions/functions.h
-python/config.json
+c/strings/strings.h
+python/iron_man_config.json
+python/module_config.json

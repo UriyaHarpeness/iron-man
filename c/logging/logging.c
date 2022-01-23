@@ -3,12 +3,12 @@
 #ifdef DEBUG_BUILD
 
 int logger_fd = -1;
-char level_names[6][11] = {"TRACE     ",
-                           "DEBUG     ",
-                           "INFO      ",
-                           "WARNING   ",
-                           "ERROR ",
-                           "CRITICAL  "};
+static const char level_names[6][11] = {"TRACE     ",
+                                        "DEBUG     ",
+                                        "INFO      ",
+                                        "WARNING   ",
+                                        "ERROR ",
+                                        "CRITICAL  "};
 
 result start_logging() {
     INITIALIZE_RESULT(res);
@@ -56,7 +56,8 @@ int write_log(enum log_levels level, const char *file, const char *func, unsigne
 
 void stop_logging() {
 #if !LOG_TO_STDOUT
-    logger_fd = close_f(logger_fd);
+    close_f(logger_fd);
+    logger_fd = -1;
 #endif // !LOG_TO_STDOUT
 }
 

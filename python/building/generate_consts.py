@@ -26,7 +26,7 @@ def generate_from_template(template: str) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Post build script for Iron Man.')
+    parser = argparse.ArgumentParser(description='Generate consts script for Iron Man.')
 
     parser.add_argument('--template', dest='template', type=pathlib.Path, required=True,
                         help='Path to the file template.')

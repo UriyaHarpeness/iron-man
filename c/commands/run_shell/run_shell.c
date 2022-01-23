@@ -106,7 +106,8 @@ buffer run_shell(result *res, buffer *buf) {
                 if (FD_ISSET(fds[PARENT][READ], &read_fds)) {
                     len = read_f(fds[PARENT][READ], command_output, 4096);
                     command_output[len] = 0;
-                    WRITE_LOG(INFO, "Read output of %zu bytes: %s", len, command_output)
+                    WRITE_LOG(INFO, "Read output of %zu bytes", len)
+                    WRITE_LOG(TRACE, "Read output: %s", command_output)
                     *res = send_string(command_output, len);
                     HANDLE_ERROR_RESULT((*res))
                     if (len == 0 && waitpid_f(new_pid, &child_exit_status, WNOHANG) != -1) {
@@ -133,7 +134,8 @@ buffer run_shell(result *res, buffer *buf) {
 
                     input = read_string(res, &input_buf, input_length);
                     HANDLE_ERROR_RESULT((*res))
-                    WRITE_LOG(INFO, "Writing input of %zu bytes: %s", input_length, input)
+                    WRITE_LOG(INFO, "Writing input of %zu bytes", input_length)
+                    WRITE_LOG(TRACE, "Writing input: %s", input)
                     write_f(fds[CHILD][WRITE], input, input_length);
                     write_f(fds[CHILD][WRITE], "\n", 1);
                 }

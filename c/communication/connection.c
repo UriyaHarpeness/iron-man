@@ -4,14 +4,14 @@ int socket_fd = -1;
 
 int connection_fd = -1;
 
-struct AES_ctx ctx;
+struct AES_ctx communication_ctx;
 
 void read_into_buffer(result *res, buffer *buf) {
     char buf_size[8];
     if (read_f(connection_fd, buf_size, 8) != 8) {
         HANDLE_ERROR((*res), FAILED_READ, "Failed reading from socket", NULL)
     }
-    AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) buf_size, sizeof(buf_size));
+    AES_CTR_xcrypt_buffer(&communication_ctx, (uint8_t *) buf_size, sizeof(buf_size));
 
     reuse_buffer(res, buf, char_to_uint64(buf_size));
     HANDLE_ERROR_RESULT((*res))
@@ -19,7 +19,7 @@ void read_into_buffer(result *res, buffer *buf) {
     if (read_f(connection_fd, buf->data, buf->size) != buf->size) {
         HANDLE_ERROR((*res), FAILED_READ, "Failed reading from socket", NULL)
     }
-    AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) buf->data, buf->size);
+    AES_CTR_xcrypt_buffer(&communication_ctx, (uint8_t *) buf->data, buf->size);
 
     goto cleanup;
 
@@ -43,12 +43,12 @@ result send_string(char *string, uint64_t size) {
     char size_[8];
 
     uint64_to_char(size, size_);
-    AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) size_, 8);
+    AES_CTR_xcrypt_buffer(&communication_ctx, (uint8_t *) size_, 8);
     if (write_f(connection_fd, size_, 8) != 8) {
         HANDLE_ERROR(res, FAILED_WRITE, "Failed writing to socket", NULL)
     }
 
-    AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) string, size);
+    AES_CTR_xcrypt_buffer(&communication_ctx, (uint8_t *) string, size);
     if (write_f(connection_fd, string, size) != size) {
         HANDLE_ERROR(res, FAILED_WRITE, "Failed writing to socket", NULL)
     }
@@ -72,7 +72,7 @@ result send_result(result res) {
 
     unsigned_int_to_char(res.code, values);
     unsigned_int_to_char(res.errno_value, values + 4);
-    AES_CTR_xcrypt_buffer(&ctx, (uint8_t *) values, 8);
+    AES_CTR_xcrypt_buffer(&communication_ctx, (uint8_t *) values, 8);
     if (write_f(connection_fd, values, 8) != 8) {
         HANDLE_ERROR(res_, FAILED_WRITE, "Failed writing to socket", NULL)
     }
@@ -121,7 +121,7 @@ result connect_() {
     }
     WRITE_LOG(DEBUG, "Accepted connection", NULL)
 
-    AES_init_ctx_iv(&ctx, KEY, IV);
+    AES_init_ctx_iv(&communication_ctx, COMMUNICATION_KEY, COMMUNICATION_IV);
 
     buf = read_buffer(&res);
     HANDLE_ERROR_RESULT(res)
@@ -130,7 +130,7 @@ result connect_() {
     HANDLE_ERROR_RESULT(res)
 
     if (value != HANDSHAKE) {
-        HANDLE_ERROR(res, HANDSHAKE_FAILED, "Handshake failed: %llx", value)
+        HANDLE_ERROR(res, HANDSHAKE_FAILED, "Handshake failed: 0x%08llx", value)
     }
 
     goto cleanup;
@@ -163,9 +163,33 @@ result communicate() {
 
         uint64_t command_id = read_uint64_t(&res, &buf);
         HANDLE_ERROR_RESULT(res)
-        if (command_id == 0) {
+        if (command_id == DISCONNECT_COMMAND_ID) {
             WRITE_LOG(INFO, "Gracefully disconnecting", NULL)
             break;
+        }
+
+        if (command_id == ADD_MODULE_COMMAND_COMMAND_ID) {
+            add_module_command_from_buffer(&res, &buf);
+            HANDLE_ERROR_RESULT(res)
+
+            destroy_buffer(&buf);
+
+            tmp_res = send_result(res);
+            HANDLE_ERROR_RESULT(tmp_res)
+
+            continue;
+        }
+
+        if (command_id == REMOVE_MODULE_COMMAND_COMMAND_ID) {
+            remove_module_command_from_buffer(&res, &buf);
+            HANDLE_ERROR_RESULT(res)
+
+            destroy_buffer(&buf);
+
+            tmp_res = send_result(res);
+            HANDLE_ERROR_RESULT(tmp_res)
+
+            continue;
         }
 
         key = read_string(&res, &buf, KEY_LENGTH);

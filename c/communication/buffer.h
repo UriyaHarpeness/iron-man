@@ -3,8 +3,8 @@
 #include "../functions/functions.h"
 #include "../result.h"
 
-#include <malloc.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 // todo: think about handling very large messages in separate buffers maybe.
 typedef struct buffer_s {
@@ -34,6 +34,8 @@ uint64_t read_uint64_t(result *res, buffer *buf);
 unsigned int read_unsigned_int(result *res, buffer *buf);
 
 const char *read_string(result *res, buffer *buf, size_t length);
+
+void write_unsigned_int(result *res, buffer *buf, unsigned int value);
 
 void write_uint8_t(result *res, buffer *buf, uint8_t value);
 
