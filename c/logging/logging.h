@@ -27,7 +27,7 @@ enum log_levels {
     CRITICAL
 };
 
-#define ENABLED_LEVEL TRACE
+#define ENABLED_LEVEL DEBUG
 #define LOG_TO_STDOUT 1
 
 int write_log(enum log_levels level, const char *file, const char *func, unsigned int line, char const *fmt, ...);

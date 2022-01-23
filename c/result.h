@@ -48,6 +48,7 @@ typedef struct result_s {
 
 #define RESULT_SUCCEEDED(res) res.code == SUCCESS
 
+// todo: try and lose errno and all the libc symbols.
 #define SET_ERROR(res, err) { \
     res.code = err; \
     res.errno_value = errno; \

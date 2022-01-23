@@ -81,11 +81,6 @@ void add_module_command(result *res, const char *module_path, const char *functi
     }
     buffer (*chosen_command)(result *, buffer *) = NULL;
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    int *(*eee)(void) = NULL;
-    eee = dlsym(handle, "__errno_location");
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
     module_constructor = dlsym(handle, string_module_constructor);
     module_destructor = dlsym(handle, string_module_destructor);
 
