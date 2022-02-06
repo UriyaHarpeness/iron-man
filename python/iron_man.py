@@ -15,51 +15,63 @@ from tiny_aes import AES_init_ctx_iv, AES_CTR_xcrypt_buffer
 
 
 class ResultCode(enum.Enum):
-    SUCCESS = 0,
+    SUCCESS = 0
 
-    FAILED_SOCKET = 1,
-    FAILED_BIND = 2,
-    FAILED_LISTEN = 3,
-    FAILED_ACCEPT = 4,
-    FAILED_READ = 5,
-    FAILED_WRITE = 6,
-    FAILED_MALLOC = 7,
-    FAILED_STAT = 8,
-    FAILED_OPEN = 9,
-    FAILED_PIPE = 10,
-    FAILED_FORK = 11,
-    FAILED_DUP2 = 12,
-    FAILED_EXECVP = 13,
-    FAILED_SELECT = 14,
-    FAILED_KILL = 15,
-    FAILED_SYSCONF = 16,
-    FAILED_MPROTECT = 17,
-    FAILED_DLOPEN = 18,
-    FAILED_DLSYM = 19,
+    FAILED_SOCKET = 1
+    FAILED_BIND = 2
+    FAILED_LISTEN = 3
+    FAILED_ACCEPT = 4
+    FAILED_READ = 5
+    FAILED_WRITE = 6
+    FAILED_MALLOC = 7
+    FAILED_STAT = 8
+    FAILED_OPEN = 9
+    FAILED_PIPE = 10
+    FAILED_FORK = 11
+    FAILED_DUP2 = 12
+    FAILED_EXECVP = 13
+    FAILED_SELECT = 14
+    FAILED_KILL = 15
+    FAILED_SYSCONF = 16
+    FAILED_MPROTECT = 17
+    FAILED_DLOPEN = 18
+    FAILED_DLSYM = 19
+    FAILED_UNLINK = 20
 
-    BUFFER_READING_OVERFLOW = 101,
-    BUFFER_WRITING_OVERFLOW = 102,
-    HANDSHAKE_FAILED = 103,
-    UNKNOWN_COMMAND = 104,
+    BUFFER_READING_OVERFLOW = 101
+    BUFFER_WRITING_OVERFLOW = 102
+    HANDSHAKE_FAILED = 103
+    UNKNOWN_COMMAND = 104
+    STOPPING = 105
+    SUICIDING = 106
+
+
+class CommandIDs(enum.Enum):
+    DISCONNECT = 0
+    ADD_MODULE_COMMAND = 1
+    REMOVE_MODULE_COMMAND = 2
+    STOP = 3
+    SUICIDE = 4
 
 
 class IronMan:
     HOST = '127.0.0.1'
     PORT = 25565
 
-    def __init__(self, config_path: pathlib.Path):
+    def __init__(self, config_path: pathlib.Path, host: str = HOST, port: int = PORT):
         with config_path.open() as config:
             self._config = json.load(config)
         self._module_commands = {}
         self._ctx = AES_init_ctx_iv(self._config['generated_consts']['communication_key'],
                                     self._config['generated_consts']['communication_iv'])
         self._connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._connection.connect((self.HOST, self.PORT))
+        self._connection.connect((host, port))
         self.send('Q', self._config['generated_consts']['handshake'][0])
 
     def __del__(self):
-        self.send('Q', 0)
-        self._connection.close()
+        if not self._connection._closed:
+            self.send('Q', CommandIDs.DISCONNECT.value)
+            self._connection.close()
 
     @staticmethod
     def to_bytes(string: str, null_terminator: bool = False) -> bytes:
@@ -87,7 +99,7 @@ class IronMan:
         code, errno_value = struct.unpack('<II', self.to_bytes(AES_CTR_xcrypt_buffer(self._ctx, result, len(result))))
         if code != 0:
             raise ValueError(
-                f'Got failed result: {ResultCode((code,)).name}' + (
+                f'Got failed result: {ResultCode(code).name}' + (
                     f'[{errno.errorcode[errno_value]} - {os.strerror(errno_value)}]' if errno_value != 0 else ''))
 
     def send_run_command(self, command_name: str, fmt: str, *args: Any):
@@ -206,7 +218,7 @@ class IronMan:
                                                 'invocation': {'arguments_format': arguments_format,
                                                                'results_format': results_format}}
         self.send(f'QI{len(str(module_path)) + 1}sI{len(function_name) + 1}sQQ',
-                  1, len(str(module_path)) + 1, self.to_bytes(str(module_path), True),
+                  CommandIDs.ADD_MODULE_COMMAND.value, len(str(module_path)) + 1, self.to_bytes(str(module_path), True),
                   len(function_name) + 1, self.to_bytes(function_name, True), function_config['size'], command_id)
 
         self.check_result()
@@ -242,12 +254,26 @@ class IronMan:
         Args:
             function_name: The function (module command) to remove.
         """
-        self.send(f'QQ', 2, self._module_commands[function_name]['command_id'])
+        self.send('QQ', CommandIDs.REMOVE_MODULE_COMMAND.value, self._module_commands[function_name]['command_id'])
 
         self.check_result()
 
         self._module_commands.pop(function_name)
         self.__delattr__(function_name)
+
+    def stop(self):
+        """
+        Stop Iron Man.
+        """
+        self.send('Q', CommandIDs.STOP.value)
+        self._connection.close()
+
+    def suicide(self):
+        """
+        Suicide Iron Man.
+        """
+        self.send('Q', CommandIDs.SUICIDE.value)
+        self._connection.close()
 
 
 def main():
@@ -278,6 +304,8 @@ def main():
     except Exception as e:
         print(e)
     print(iron_man.get_file('../main.c'))
+    # iron_man.suicide()
+    iron_man.stop()
 
 
 if __name__ == '__main__':

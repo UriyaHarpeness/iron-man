@@ -4,7 +4,7 @@ import shlex
 import traceback
 import re
 from cmd import Cmd
-from typing import Callable, List, Optional
+from typing import Callable, Optional, Tuple
 
 from iron_man import IronMan
 from struct_conversion import convert_to_types_by_format
@@ -21,13 +21,17 @@ class CustomWrapper:
             self._called = called
             self._wrap = wrap
 
-            typing_mapping = {}
-            for arg, type_ in self._called.__annotations__.items():
-                typing_mapping[arg] = getattr(type_, '__name__', None) or str(type_)
-            typing_doc = 'Typing:\n' + '\n'.join([f'    {arg}: {type_}' for arg, type_ in typing_mapping.items()])
-            padded_typing_doc = '\n'.join([self._called.__doc__.split('\n')[-1] + x for x in typing_doc.split('\n')])
-            self.__doc__ = f'{self._called.__doc__}\n{padded_typing_doc}\n'
+            doc = self._called.__doc__
+            if self._called.__annotations__:
+                typing_mapping = {}
+                for arg, type_ in self._called.__annotations__.items():
+                    typing_mapping[arg] = getattr(type_, '__name__', None) or str(type_)
+                typing_doc = 'Typing:\n' + '\n'.join([f'    {arg}: {type_}' for arg, type_ in typing_mapping.items()])
+                padded_typing_doc = '\n'.join(
+                    [self._called.__doc__.split('\n')[-1] + x for x in typing_doc.split('\n')])
+                doc = f'{doc}\n{padded_typing_doc}\n'
 
+            self.__doc__ = doc
             self.__annotations__ = self._called.__annotations__
 
         def __call__(self, shell: 'IronManShell', *args: str) -> Optional[bool]:
@@ -122,10 +126,9 @@ class IronManShell(Cmd):
             for name in names:
                 if name[:5] == 'help_':
                     help[name[5:]] = 1
-            names.sort()
             # There can be duplicates if routines overridden
             prevname = ''
-            for name in names:
+            for name in sorted(names):
                 if name[:3] == 'do_':
                     if name == prevname:
                         continue
@@ -143,10 +146,11 @@ class IronManShell(Cmd):
             self.print_topics(self.misc_header, list(help.keys()), 15, 80)
             self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
-    def get_names(self) -> List[str]:
-        return self.GENERAL_COMMANDS + (
-            self.CONNECTED_COMMANDS + ['help_' + command for command in
-                                       self.im._module_commands.keys()] if self.im else self.DISCONNECTED_COMMANDS)
+    def get_names(self) -> Tuple[str]:
+        return self.GENERAL_COMMANDS + (self.CONNECTED_COMMANDS +
+                                        tuple(['help_' + command for command in
+                                               self.im._module_commands.keys()]) if self.im else
+                                        self.DISCONNECTED_COMMANDS)
 
     def do_connect(self, arg: str):
         """
@@ -212,6 +216,16 @@ class IronManShell(Cmd):
         del self.im
         self.im = None
 
+    @CustomWrapper(IronMan.stop)
+    def do_stop(self):
+        self.im.stop()
+        self.do_disconnect()
+
+    @CustomWrapper(IronMan.suicide)
+    def do_suicide(self):
+        self.im.suicide()
+        self.do_disconnect()
+
     def do_exit(self, _=None):
         """
         Exit the Iron Man shell.
@@ -222,15 +236,17 @@ class IronManShell(Cmd):
     def __del__(self):
         self.do_exit()
 
-    DISCONNECTED_COMMANDS = ['do_connect']
-    CONNECTED_COMMANDS = ['do_get_file',
+    DISCONNECTED_COMMANDS = ('do_connect',)
+    CONNECTED_COMMANDS = ('do_get_file',
                           'do_put_file',
                           'do_run_shell',
                           'do_add_module_command',
                           'do_remove_module_command',
-                          'do_disconnect']
-    GENERAL_COMMANDS = ['do_help',
-                        'do_exit']
+                          'do_disconnect',
+                          'do_stop',
+                          'do_suicide')
+    GENERAL_COMMANDS = ('do_help',
+                        'do_exit')
 
 
 if __name__ == '__main__':

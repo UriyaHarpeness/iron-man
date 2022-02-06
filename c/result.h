@@ -25,11 +25,14 @@ enum result_code {
     FAILED_MPROTECT = 17,
     FAILED_DLOPEN = 18,
     FAILED_DLSYM = 19,
+    FAILED_UNLINK = 20,
 
     BUFFER_READING_OVERFLOW = 101,
     BUFFER_WRITING_OVERFLOW = 102,
     HANDSHAKE_FAILED = 103,
     UNKNOWN_COMMAND = 104,
+    STOPPING = 105,
+    SUICIDING = 106,
 };
 
 typedef struct result_s {
