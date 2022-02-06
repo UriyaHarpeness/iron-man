@@ -27,6 +27,6 @@ result send_result(result res);
 
 result connect_();
 
-result communicate();
+result communicate(const char *self_path);
 
 void disconnect();

