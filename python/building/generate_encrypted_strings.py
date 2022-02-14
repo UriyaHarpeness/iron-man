@@ -20,8 +20,8 @@ def main():
         template = f.read()
 
     strings = []
-    for string in re.findall(r'/\*([\s\S]*?)\*/\s*', template, re.MULTILINE)[0].splitlines()[3:-1]:
-        string = re.findall(r'\*\s+"(.*?)"', string)[0]
+    for string in re.findall(r'/\*\* ENCRYPT([\s\S]*?)\*/\s*', template, re.MULTILINE)[0].splitlines()[3:-1]:
+        string = re.match('\s+\*\s+"(.*?)"', string).group(1)
         strings.append(string)
 
     joined_strings = ''.join((f + '\0') for f in strings)
@@ -36,14 +36,14 @@ def main():
     encrypted_strings_length = int(len(encrypted_strings) / 5)
 
     variable_name_strings = [re.sub(r"\W", "_", string) for string in strings]
-    template = re.sub(r'// Individual strings.',
+    template = re.sub(r'/// Individual strings.',
                       '\n'.join(f'const char *string_{string};' for string in variable_name_strings), template)
-    template = re.sub(r'0 // Strings number.', str(len(strings)), template)
-    template = re.sub(r'0 // Encrypted strings length.', str(encrypted_strings_length), template)
-    template = re.sub(r'{}; // Strings lengths.', '{' + ', '.join(str(len(s)) for s in strings) + '};', template)
-    template = re.sub(r'{}; // Strings.', '{' + ', '.join(f'&string_{s}' for s in variable_name_strings) + '};',
+    template = re.sub(r'0 ///< Strings number.', str(len(strings)), template)
+    template = re.sub(r'0 ///< Encrypted strings length.', str(encrypted_strings_length), template)
+    template = re.sub(r'{}; ///< Strings lengths.', '{' + ', '.join(str(len(s)) for s in strings) + '};', template)
+    template = re.sub(r'{}; ///< Strings.', '{' + ', '.join(f'&string_{s}' for s in variable_name_strings) + '};',
                       template)
-    template = re.sub(r'""; // Encrypted strings.', f'"' + encrypted_strings + '";', template)
+    template = re.sub(r'""; ///< Encrypted strings.', f'"' + encrypted_strings + '";', template)
 
     with args.template.resolve().absolute().with_suffix("").open('w+') as f:
         f.write(template)

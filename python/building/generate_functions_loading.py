@@ -20,7 +20,7 @@ def main():
         template = f.read()
 
     functions = []
-    for function_name in re.findall(r'/\*([\s\S]*?)\*/\s*', template, re.MULTILINE)[0].splitlines()[3:-1]:
+    for function_name in re.findall(r'/\*\* ENCRYPT([\s\S]*?)\*/\s*', template, re.MULTILINE)[0].splitlines()[3:-1]:
         function_name = re.findall(r'\*\s+(\w+)', function_name)[0]
         functions.append(function_name)
 
@@ -35,14 +35,14 @@ def main():
                                     AES_CTR_xcrypt_buffer(ctx, function_names_string, len(function_names_string)))
     function_names_length = int(len(function_names_string) / 5)
 
-    template = re.sub(r'0 // Functions number.', str(len(functions)), template)
-    template = re.sub(r'0 // Function names length.', str(function_names_length), template)
-    template = re.sub(r'{}; // Functions.', '{' + ', '.join(f'(void **) &{f}_f' for f in functions) + '};', template)
-    template = re.sub(r'{}; // Function name lengths.', '{' + ', '.join(str(len(f)) for f in functions) + '};',
+    template = re.sub(r'0 ///< Functions number.', str(len(functions)), template)
+    template = re.sub(r'0 ///< Function names length.', str(function_names_length), template)
+    template = re.sub(r'{}; ///< Functions.', '{' + ', '.join(f'(void **) &{f}_f' for f in functions) + '};', template)
+    template = re.sub(r'{}; ///< Function name lengths.', '{' + ', '.join(str(len(f)) for f in functions) + '};',
                       template)
-    template = re.sub(r'""; // Function names.', f'"' + function_names_string + '";',
+    template = re.sub(r'""; ///< Function names.', f'"' + function_names_string + '";',
                       template)
-    template = re.sub(r'// Define new function names.',
+    template = re.sub(r'/// Define new function names.',
                       '\n'.join(f'#define {function}_f {function}' for function in functions), template)
 
     with args.template.resolve().absolute().with_suffix("").open('w+') as f:
