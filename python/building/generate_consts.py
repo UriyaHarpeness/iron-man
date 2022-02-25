@@ -1,31 +1,12 @@
 import argparse
 import json
-import random
-import re
-
 import pathlib
-from functools import partial
 
-TYPE_GENERATORS = {
-    'uint8': partial(random.randint, 0, 2 ** 8 - 1),
-    'uint64': partial(random.randint, 0, 2 ** 64 - 1)
-}
-
-GENERATED = {}
-
-
-def generate_randoms(match) -> str:
-    name, number, type_ = match.groups()
-    generated = [TYPE_GENERATORS[type_]() for _ in range(int(number))]
-    GENERATED[name] = generated
-    return ', '.join([hex(value) for value in generated])
-
-
-def generate_from_template(template: str) -> str:
-    return re.sub(r'/\*(\w+): (\d+) random (\w+)\*/', generate_randoms, template)
+from building.randoms_generator import generate_from_template
 
 
 def main():
+    # Arguments.
     parser = argparse.ArgumentParser(description='Generate consts script for Iron Man.')
 
     parser.add_argument('--template', dest='template', type=pathlib.Path, required=True,
@@ -35,24 +16,25 @@ def main():
 
     args = parser.parse_args()
 
-    print(f'Generating consts from template: {args.template.resolve().absolute()}')
+    print(f'Generating consts from template: {args.template}')
 
-    global GENERATED
-    GENERATED = {}
-
+    # Read the template file.
     with args.template.open() as f:
         template = f.read()
 
-    generated_file = generate_from_template(template)
+    # Generate values for the template and get the filled template and generated values.
+    template, generated = generate_from_template(template)
 
+    # Write the generated file from the template.
+    generated_file = args.template.with_suffix('')
+    with generated_file.open('w+') as f:
+        f.write(template)
+
+    # Write the generated values to the config file.
     with args.config.open('w+') as f:
-        json.dump({'generated_consts': GENERATED}, f, indent=2)
+        json.dump({'generated_consts': generated}, f, indent=2)
 
-    with args.template.resolve().absolute().with_suffix("").open('w+') as f:
-        f.write(generated_file)
-
-    print(f'Generated file: {args.template.resolve().absolute().with_suffix("")}, '
-          f'saved values in {args.config.resolve().absolute()}')
+    print(f'Generated file: {generated_file}, saved values in {args.config}')
 
 
 if __name__ == '__main__':
