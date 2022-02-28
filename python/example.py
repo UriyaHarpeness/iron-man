@@ -21,48 +21,50 @@ def main():
         pathlib.Path('python/module_config.json'), 'II', 'I')
 
     # >>> sum 4 4
-    print(iron_man.sum(4, 4)[0])
+    print('Summing 4 and 4 gives:', iron_man.sum(4, 4)[0])
     # >>> sum 4 400
-    print(iron_man.sum(4, 400)[0])
+    print('Summing 4 and 400 gives:', iron_man.sum(4, 400)[0])
     # >>> sum 1000 24
-    print(iron_man.sum(1000, 24)[0])
+    print('Summing 1000 and 24 gives:', iron_man.sum(1000, 24)[0])
 
     # >>> remove_module_command sum
     iron_man.remove_module_command('sum')
 
     # >>> difference 4 4
-    print(iron_man.difference(4, 4)[0])
+    print('The difference between 4 and 4 is:', iron_man.difference(4, 4)[0])
     # >>> difference 4 400
-    print(iron_man.difference(4, 400)[0])
+    print('The difference between 4 and 400 is:', iron_man.difference(4, 400)[0])
     # >>> difference 1000 24
-    print(iron_man.difference(1000, 24)[0])
+    print('The difference between 1000 and 24 is:', iron_man.difference(1000, 24)[0])
 
-    # >>> get_file ../main.c
-    data = iron_man.get_file('../main.c')
+    # >>> get_file /etc/hosts
+    data = iron_man.get_file('/etc/hosts')
 
     # >>> run_shell nonexistant
-    print('Child exited with', iron_man.run_shell('nonexistant'))
+    print('Running "nonexistant", exited with', iron_man.run_shell('nonexistant'))
     # >>> run_shell sleep 1
-    print('Child exited with', iron_man.run_shell('sleep', ['1']))
-    # >>> run_shell ls
-    print('Child exited with', iron_man.run_shell('ls'))
+    print('Running "sleep 1", exited with', iron_man.run_shell('sleep', ['1']))
+    # >>> run_shell ls -l /proc
+    print('Running "ls -l /proc", exited with', iron_man.run_shell('ls', ['-l', '/proc']))
 
-    # >>> put_file ../main.c.copy "some text here"
-    iron_man.put_file('../main.c.copy', data)
+    # >>> put_file /tmp/hosts_copy "some text here"
+    iron_man.put_file('/tmp/hosts_copy', data)
 
-    # >>> run_shell rm ../main.c.copy
-    print('Child exited with', iron_man.run_shell('rm', ['../main.c.copy']))
+    # >>> run_shell rm /tmp/hosts_copy
+    print('Child exited with', iron_man.run_shell('rm', ['/tmp/hosts_copy']))
     print(data)
 
     try:
         # >>> get_file /root
+        print('Getting file "/root"')
         iron_man.get_file('/root')
     except Exception as e:
         print(e)
 
     try:
-        # >>> get_file ../main.pyyy
-        iron_man.get_file('../main.pyyy')
+        # >>> get_file nonexistant
+        print('Getting file "nonexistant"')
+        iron_man.get_file('nonexistant')
     except Exception as e:
         print(e)
 

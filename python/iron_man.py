@@ -269,6 +269,7 @@ class IronMan:
                               len(command) + 1, self.to_bytes(command, True), len(args), *func_args)
 
         stop = False
+        print('Enter "KILL!" to kill the process.')
         # Loop on select until the child process dies or forcefully killed.
         while not stop:
             for readable in select.select([self._connection, sys.stdin], [], [], 0.05)[0]:
@@ -278,7 +279,7 @@ class IronMan:
 
                     if len(output) == 0:
                         # Child process died.
-                        print('Child process died')
+                        print('Child process died.')
                         stop = True
                         continue
 
@@ -294,7 +295,7 @@ class IronMan:
 
                     if message == 'KILL!':
                         # Kill child process.
-                        print('Killing child process')
+                        print('Killing child process.')
                         self.send('I', 0)
                         stop = True
                         continue

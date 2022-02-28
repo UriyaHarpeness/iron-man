@@ -76,6 +76,8 @@ buffer run_command(result *res, uint64_t command_id, const char *key, const char
 /**
  * Remove module command.
  *
+ * Removes a module command by function name.
+ *
  * @param command_id    The ID of the command.
  * @return  The result of the function.
  */
