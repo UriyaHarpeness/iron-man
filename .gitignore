@@ -1,5 +1,12 @@
 cmake-build-debug*/
+cmake-build-release*/
 .idea/
 __pycache__/
 *.pyc
+python/.dcignore
 
+c/consts.h
+c/functions/functions.h
+c/strings/strings.h
+python/iron_man_config.json
+python/module_config.json
