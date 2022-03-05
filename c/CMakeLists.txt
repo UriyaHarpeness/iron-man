@@ -100,3 +100,5 @@ if (CMAKE_BUILD_TYPE MATCHES Release)
             --remove-section .gnu.version
             --remove-section *note.gnu* $<TARGET_FILE:module_math>)
 endif ()
+
+# todo: maybe make the features more toggleable.

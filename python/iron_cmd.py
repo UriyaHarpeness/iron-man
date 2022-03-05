@@ -11,16 +11,43 @@ from struct_conversion import convert_to_types_by_format
 
 
 class CustomWrapper:
+    """
+    A decorator for proxy functions that adds typing information to the function's documentation and converts the
+    arguments' types to fit the called function's signature.
+    """
+
     def __init__(self, called: Callable):
+        """
+        Constructor.
+
+        Args:
+            called: The wrapped function.
+        """
         self._called = called
 
     class Wrapped:
+        """
+        A function decorator.
+
+        See Also:
+            CustomWrapper.
+        """
+
+        # Regex for a keyword argument.
         KEYWORD_ARGUMENT_REGEX = re.compile(r'^(\w+)=(.*)$')
 
         def __init__(self, called: Callable, wrap: Callable[['IronManShell', str], Optional[bool]]):
+            """
+            Constructor.
+
+            Args:
+                called: The function that will be called inside the proxy function.
+                wrap: The proxy function.
+            """
             self._called = called
             self._wrap = wrap
 
+            # Enrich the proxy function's documentation with information from the called function.
             doc = self._called.__doc__
             if self._called.__annotations__:
                 typing_mapping = {}
@@ -31,13 +58,26 @@ class CustomWrapper:
                     [self._called.__doc__.split('\n')[-1] + x for x in typing_doc.split('\n')])
                 doc = f'{doc}\n{padded_typing_doc}\n'
 
+            # Set the function's documentation and typing annotations.
             self.__doc__ = doc
             self.__annotations__ = self._called.__annotations__
 
         def __call__(self, shell: 'IronManShell', *args: str) -> Optional[bool]:
+            """
+            Call the function.
+
+            Args:
+                shell: The shell that called the function.
+                *args: The arguments to the function.
+
+            Returns:
+                The function's return value.
+            """
+            # Parse the arguments to the function.
             pass_args = list(itertools.chain(*[shlex.split(arg) for arg in args]))
             pass_kwargs = {}
 
+            # Iterate the arguments and create keyword arguments for matching regexes.
             for arg_index in range(len(pass_args) - 1, -1, -1):
                 match = self.KEYWORD_ARGUMENT_REGEX.match(pass_args[arg_index])
                 if match:
@@ -45,6 +85,7 @@ class CustomWrapper:
                     pass_kwargs[name] = value
                     pass_args.pop(arg_index)
 
+            # Call the function with the parsed positional and keyword arguments.
             return self._wrap(shell, *pass_args, **pass_kwargs)
 
     def __call__(self, wrap: Callable) -> Callable:
@@ -52,10 +93,20 @@ class CustomWrapper:
 
 
 class IronManShell(Cmd):
+    """
+    A Cmd wrapper for the Iron Man Python client.
+    """
+
+    # The into message.
     intro = 'Welcome to Iron Man\'s shell.   Type help or ? to list commands.\n'
+
+    # The prompt.
     prompt = '(iron man) '
 
     def __init__(self):
+        """
+        Constructor.
+        """
         super().__init__()
         self.im: Optional[IronMan] = None
 
@@ -147,6 +198,12 @@ class IronManShell(Cmd):
             self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
     def get_names(self) -> Tuple[str]:
+        """
+        Get the available operations at the current state.
+
+        Returns:
+            The available operations at the current state.
+        """
         return self.GENERAL_COMMANDS + (self.CONNECTED_COMMANDS +
                                         tuple(['help_' + command for command in
                                                self.im._module_commands.keys()]) if self.im else
@@ -234,9 +291,15 @@ class IronManShell(Cmd):
         return True
 
     def __del__(self):
+        """
+        Destructor.
+        """
         self.do_exit()
 
+    # Commands that are available at disconnected state.
     DISCONNECTED_COMMANDS = ('do_connect',)
+
+    # Commands that are available at connected state.
     CONNECTED_COMMANDS = ('do_get_file',
                           'do_put_file',
                           'do_run_shell',
@@ -245,6 +308,8 @@ class IronManShell(Cmd):
                           'do_disconnect',
                           'do_stop',
                           'do_suicide')
+
+    # Commands that are always available.
     GENERAL_COMMANDS = ('do_help',
                         'do_exit')
 

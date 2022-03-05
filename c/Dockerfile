@@ -7,22 +7,11 @@
 #   docker run -d --cap-add sys_ptrace -p127.0.0.1:2222:22 -p25565:25565 -v $(pwd):/home/user/iron_man --name clion_remote_env clion/remote-cpp-env:0.5
 #   ssh-keygen -f "$HOME/.ssh/known_hosts" -R "[localhost]:2222"
 #
-# stop:
+# Stop:
 #   docker stop clion_remote_env
 #
-# ssh credentials (test user):
+# SSH credentials (test user):
 #   user@password
-#
-# Build Iron Man:
-# cd iron_man/c/cmake-build-debug
-# rm -r * && cmake .. -DCMAKE_BUILD_TYPE=Debug && make
-#
-# Checks:
-# readelf -s FILE
-# strings FILE
-# readelf -a FILE
-# objdump -D -M intel FILE
-# nm -D FILE
 
 FROM ubuntu:20.04
 

@@ -1,11 +1,16 @@
 #include "buffer.h"
 
-void reuse_buffer(result *res, buffer *buf, size_t size) {
+result reuse_buffer(buffer *buf, size_t size) {
+    INITIALIZE_RESULT(res);
+
+    // Release the old buffer's content.
     destroy_buffer(buf);
+
+    // Prepare and allocate data for the new buffer.
     buf->size = size;
     buf->data = malloc_f(buf->size);
     if (buf->data == NULL) {
-        HANDLE_ERROR((*res), FAILED_MALLOC, "Failed allocating buffer", NULL)
+        HANDLE_ERROR(res, FAILED_MALLOC, "Failed allocating buffer", NULL)
     }
 
     goto cleanup;
@@ -16,12 +21,14 @@ void reuse_buffer(result *res, buffer *buf, size_t size) {
 
     cleanup:
 
-    return;
+    return res;
 }
 
 buffer create_buffer(result *res, size_t size) {
     INITIALIZE_BUFFER(buf);
-    reuse_buffer(res, &buf, size);
+
+    // Create the new buffer.
+    *res = reuse_buffer(&buf, size);
     HANDLE_ERROR_RESULT((*res));
 
     goto cleanup;
@@ -36,6 +43,7 @@ buffer create_buffer(result *res, size_t size) {
 }
 
 void destroy_buffer(buffer *buf) {
+    // Free the buffer's data and zero the values.
     free_f(buf->data);
     buf->size = 0;
     buf->position = 0;
@@ -64,10 +72,13 @@ void unsigned_int_to_char(unsigned int value, char buf[4]) {
 
 uint64_t read_uint64_t(result *res, buffer *buf) {
     uint64_t value = 0;
+
+    // Make sure there is enough data in the buffer.
     if ((buf->size - buf->position) < 8) {
         HANDLE_ERROR((*res), BUFFER_READING_OVERFLOW, "Buffer reading overflow", NULL)
     }
 
+    // Read the value and move the position.
     value = char_to_uint64(buf->data + buf->position);
     buf->position += 8;
 
@@ -78,10 +89,13 @@ uint64_t read_uint64_t(result *res, buffer *buf) {
 
 unsigned int read_unsigned_int(result *res, buffer *buf) {
     unsigned int value = 0;
+
+    // Make sure there is enough data in the buffer.
     if ((buf->size - buf->position) < 4) {
         HANDLE_ERROR((*res), BUFFER_READING_OVERFLOW, "Buffer reading overflow", NULL)
     }
 
+    // Read the value and move the position.
     value = char_to_unsigned_int(buf->data + buf->position);
     buf->position += 4;
 
@@ -92,10 +106,13 @@ unsigned int read_unsigned_int(result *res, buffer *buf) {
 
 const char *read_string(result *res, buffer *buf, size_t length) {
     char *value = NULL;
+
+    // Make sure there is enough data in the buffer.
     if ((buf->size - buf->position) < length) {
         HANDLE_ERROR((*res), BUFFER_READING_OVERFLOW, "Buffer reading overflow", NULL)
     }
 
+    // Read the value and move the position.
     value = buf->data + buf->position;
     buf->position += length;
 
@@ -104,28 +121,36 @@ const char *read_string(result *res, buffer *buf, size_t length) {
     return value;
 }
 
-void write_unsigned_int(result *res, buffer *buf, unsigned int value) {
+result write_unsigned_int(buffer *buf, unsigned int value) {
+    INITIALIZE_RESULT(res);
+
+    // Make sure there is enough data in the buffer.
     if ((buf->size - buf->position) < 4) {
-        HANDLE_ERROR((*res), BUFFER_WRITING_OVERFLOW, "Buffer writing overflow", NULL)
+        HANDLE_ERROR(res, BUFFER_WRITING_OVERFLOW, "Buffer writing overflow", NULL)
     }
 
+    // Write the value and move the position.
     unsigned_int_to_char(value, buf->data + buf->position);
     buf->position += 4;
 
     error_cleanup:
 
-    return;
+    return res;
 }
 
-void write_uint8_t(result *res, buffer *buf, uint8_t value) {
+result write_uint8_t(buffer *buf, uint8_t value) {
+    INITIALIZE_RESULT(res);
+
+    // Make sure there is enough data in the buffer.
     if ((buf->size - buf->position) < 1) {
-        HANDLE_ERROR((*res), BUFFER_WRITING_OVERFLOW, "Buffer writing overflow", NULL)
+        HANDLE_ERROR(res, BUFFER_WRITING_OVERFLOW, "Buffer writing overflow", NULL)
     }
 
+    // Write the value and move the position.
     uint8_to_char(value, buf->data + buf->position);
     buf->position += 1;
 
     error_cleanup:
 
-    return;
+    return res;
 }

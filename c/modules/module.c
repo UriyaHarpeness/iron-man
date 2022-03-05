@@ -1,12 +1,14 @@
 #include "module.h"
 
-static uint8_t loads = 0;
+/// The reference count of the module.
+static uint8_t reference_count = 0;
 
 __attribute__((visibility("protected")))
 result module_constructor() {
     INITIALIZE_RESULT(res);
 
-    if (loads == 0) {
+    // When the module is first loaded, load all the functions it needs and initialize logging.
+    if (reference_count == 0) {
         res = load_all_functions();
         HANDLE_ERROR_RESULT(res)
 
@@ -16,19 +18,26 @@ result module_constructor() {
         WRITE_LOG(INFO, "Loading module", NULL)
     }
 
-    loads += 1;
+    // Increase the reference count.
+    reference_count += 1;
+
+    goto cleanup;
 
     error_cleanup:
+
+    cleanup:
 
     return res;
 }
 
 __attribute__((visibility("protected")))
 void module_destructor() {
-    if (loads == 1) {
+    // When the module is lastly unloaded, stop the logging.
+    if (reference_count == 1) {
         WRITE_LOG(INFO, "Unloading module", NULL)
         stop_logging();
     }
 
-    loads -= 1;
+    // Decrease the reference count.
+    reference_count -= 1;
 }
